@@ -1,0 +1,63 @@
+{
+  "name": "Cherry Blossom",
+  "recommended_iterations": 7,
+  "description": "A large mature cherry tree with spreading boughs, fine twigs and dense pale-pink blossom clusters.",
+  "notes": [
+    "A is a growing bough; G groups three flowers; B draws five petals; d centers a disk.",
+    "The root starts five boughs with different depths and angles. Palette and branching configuration travel with every child.",
+    "Integer branch IDs vary petal colors and twig details without changing the silhouette between animation frames."
+  ],
+  "axiom": "S",
+  "symbols": [
+    "S{scale: 1}",
+    "d{r: 1, c: #FFFFFF}",
+    "E{r: 3, c: #4F8B42}",
+    "B{r: 3, c: #F4B4CE, center: #DCA441}",
+    "G{r: 3, c: #F4B4CE, center: #DCA441}",
+    "A{n: 4, length: 88, w: 7, h: 0, id: 1, u: 1, p: [#F5A9C5, #F9C5D5, #FDE0E9, #EF91B2], cfg: {'spread': 26}}"
+  ],
+  "drawing": [
+    {
+      "from": "S",
+      "to": ""
+    },
+    {
+      "from": "d",
+      "to": "[C{color: c}M{length: -r}L{size: r}]"
+    },
+    {
+      "from": "E",
+      "to": "[[M{length: r * 0.7}d{r: r * 0.7, c: c}][M{length: r * 1.5}d{r: r * 0.95, c: c}][M{length: r * 2.3}d{r: r * 0.65, c: c}]C{color: #739653}F{length: r * 2.8, width: max(0.4, r * 0.13)}]"
+    },
+    {
+      "from": "B",
+      "to": "[[R{deg: 0.0}M{length: r * 1.25}d{r: r, c: c}][R{deg: 72.0}M{length: r * 1.25}d{r: r, c: c}][R{deg: 144.0}M{length: r * 1.25}d{r: r, c: c}][R{deg: 216.0}M{length: r * 1.25}d{r: r, c: c}][R{deg: 288.0}M{length: r * 1.25}d{r: r, c: c}]d{r: r * 0.46, c: center}]"
+    },
+    {
+      "from": "G",
+      "to": "[B{r: r, c: c, center: center}[R{deg: -65}M{length: r * 3.1}B{r: r * 0.8, c: c, center: center}][R{deg: 65}M{length: r * 3.1}B{r: r * 0.9, c: c, center: center}]]"
+    },
+    {
+      "from": "A",
+      "to": "C{color: #725052}F{length: length * 0.45, width: max(0.7 * u, w)}G{r: 2.2 * u, c: p[id % p.len()]}"
+    }
+  ],
+  "rules": [
+    {
+      "from": "S",
+      "to": "M{length: 24 * scale}C{color: #59413F}[R{deg: -65}F{length: 36 * scale, width: 11 * scale}][R{deg: 65}F{length: 32 * scale, width: 11 * scale}]F{length: 58 * scale, width: 20 * scale}[R{deg: -65}A{n: 4, length: 90 * scale, w: 9 * scale, h: -65, id: 2, u: scale}][R{deg: 62}A{n: 4, length: 88 * scale, w: 9 * scale, h: 62, id: 3, u: scale}]R{deg: -4}F{length: 57 * scale, width: 16 * scale}R{deg: 4}[R{deg: -33}A{n: 4, length: 87 * scale, w: 8 * scale, h: -33, id: 4, u: scale}][R{deg: 35}A{n: 4, length: 86 * scale, w: 8 * scale, h: 35, id: 5, u: scale}]A{n: 5, length: 78 * scale, w: 11 * scale, h: 0, id: 7, u: scale}"
+    },
+    {
+      "from": "A{n: fn v -> v > 1}",
+      "to": "C{color: #725052}F{length: length, width: max(0.8 * u, w)}[M{length: -length * 0.45}R{deg: -55}F{length: 9 * u, width: 0.7 * u}G{r: 3.3 * u, c: p[(id + 1) % p.len()]}][R{deg: 55}F{length: 8 * u, width: 0.65 * u}G{r: 3.1 * u, c: p[id % p.len()]}][R{deg: (h * 0.82 - cfg.spread) - h}A{n: n - 1, length: length * 0.77, w: w * 0.7, h: h * 0.82 - cfg.spread, id: id * 2 + 0, u: u, p: p, cfg: cfg}][R{deg: (h * 0.82 + cfg.spread) - h}A{n: n - 1, length: length * 0.8, w: w * 0.7, h: h * 0.82 + cfg.spread, id: id * 2 + 1, u: u, p: p, cfg: cfg}]"
+    },
+    {
+      "from": "A{n: 1}",
+      "to": "C{color: #8D6264}F{length: length, width: max(0.6 * u, w)}[R{deg: -40}M{length: 5 * u}B{r: 2.6 * u, c: p[id % p.len()]}][R{deg: (h * 0.82 - cfg.spread) - h}A{n: n - 1, length: length * 0.73, w: w * 0.7, h: h * 0.82 - cfg.spread, id: id * 2 + 0, u: u, p: p, cfg: cfg}][R{deg: (h * 0.82 + cfg.spread) - h}A{n: n - 1, length: length * 0.76, w: w * 0.7, h: h * 0.82 + cfg.spread, id: id * 2 + 1, u: u, p: p, cfg: cfg}]"
+    },
+    {
+      "from": "A{n: 0}",
+      "to": "C{color: #987475}F{length: length * 0.45, width: max(0.5 * u, w)}G{r: (2.8 + (id % 4) * 0.3) * u, c: p[id % p.len()]}"
+    }
+  ]
+}

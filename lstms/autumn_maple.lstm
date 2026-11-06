@@ -1,0 +1,54 @@
+{
+  "name": "Autumn Maple",
+  "recommended_iterations": 7,
+  "description": "A broad autumn crown with amber, orange and crimson leaf fans on a dark branching trunk.",
+  "notes": [
+    "The crown uses three boughs of unequal length and a slight prevailing lean.",
+    "Every leaf fan has five individually veined leaves; RGB channels vary with the branch ID.",
+    "Branch predicates combine depth and configuration values."
+  ],
+  "axiom": "S",
+  "symbols": [
+    "S{scale: 1}",
+    "d{r: 1, c: #FFFFFF}",
+    "E{r: 3, c: #4F8B42}",
+    "h{r: 4, c: #D96532}",
+    "A{n: 5, length: 95, w: 9, h: 0, id: 1, u: 1, cfg: {'turn': 27, 'shrink': 0.76}, palette: [#B93F36, #D96532, #E88A35, #DCA73C]}"
+  ],
+  "drawing": [
+    {
+      "from": "S",
+      "to": ""
+    },
+    {
+      "from": "d",
+      "to": "[C{color: c}M{length: -r}L{size: r}]"
+    },
+    {
+      "from": "E",
+      "to": "[[M{length: r * 0.7}d{r: r * 0.7, c: c}][M{length: r * 1.5}d{r: r * 0.95, c: c}][M{length: r * 2.3}d{r: r * 0.65, c: c}]C{color: #739653}F{length: r * 2.8, width: max(0.4, r * 0.13)}]"
+    },
+    {
+      "from": "h",
+      "to": "[[R{deg: -70}E{r: r, c: c}][R{deg: -35}E{r: r, c: c}][R{deg: 0}E{r: r, c: c}][R{deg: 35}E{r: r, c: c}][R{deg: 70}E{r: r, c: c}]]"
+    },
+    {
+      "from": "A",
+      "to": "h{r: 3 * u, c: palette[id % palette.len()]}"
+    }
+  ],
+  "rules": [
+    {
+      "from": "S",
+      "to": "M{length: 24 * scale}C{color: #54453D}R{deg: 7}F{length: 105 * scale, width: 20 * scale}R{deg: -7}[R{deg: -52}A{length: 102 * scale, w: 10 * scale, h: -52, id: 2, u: scale}][R{deg: 45}A{length: 96 * scale, w: 10 * scale, h: 45, id: 3, u: scale}][R{deg: -8}A{length: 90 * scale, w: 12 * scale, h: -8, id: 5, u: scale}]"
+    },
+    {
+      "from": "A{n: fn v -> v > 0, cfg: fn v -> v.shrink > 0 && v.shrink < 1}",
+      "to": "C{color: #685444}F{length: length, width: max(0.8 * u, w)}[M{length: -length * 0.4}R{deg: -35}h{r: 5.5 * u, c: palette[(id + 1) % palette.len()]}][R{deg: 35}h{r: (4.5 + (5 - n) * 0.25) * u, c: palette[id % palette.len()]}][R{deg: (h * 0.78 - cfg.turn) - h}A{n: n - 1, length: length * cfg.shrink, w: w * 0.7, h: h * 0.78 - cfg.turn, id: id * 2 + 0, u: u, cfg: cfg, palette: palette}][R{deg: (h * 0.78 + cfg.turn) - h}A{n: n - 1, length: length * cfg.shrink, w: w * 0.7, h: h * 0.78 + cfg.turn, id: id * 2 + 1, u: u, cfg: cfg, palette: palette}]"
+    },
+    {
+      "from": "A{n: 0}",
+      "to": "C{color: #85664B}F{length: length * 0.4, width: max(0.6 * u, w)}h{r: (5.2 + id % 3 * 0.4) * u, c: palette[id % palette.len()]}[R{deg: -60}M{length: 8 * u}h{r: 3.8 * u, c: (210 << 16) | ((75 + id % 70) << 8) | 42}]"
+    }
+  ]
+}

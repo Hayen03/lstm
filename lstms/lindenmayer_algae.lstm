@@ -1,0 +1,58 @@
+// Original algae productions: A -> AB; B -> A.
+// python test.py lindenmayer_algae.lstm -n 10 --animate
+{
+  "name": "Lindenmayer's algae \u2014 living filament",
+  "recommended_iterations": 10,
+  "bg": "background",
+  "globals": {
+    "scale": 1,
+    "background": 1060395,
+    "type_a": 7911533,
+    "type_b": 5025186,
+    "wall": 2843986,
+    "nucleus": 14740395,
+    "cell_size": 6,
+    "gap": 1.2,
+    "origin_x": -320
+  },
+  "description": "Original Fibonacci word A -> AB, B -> A. Each symbol draws one cell; there are no extra growth rules beyond S setup. A cells are green; B cells are turquoise. Cells form a straight filament.",
+  "axiom": "S",
+  "symbols": [
+    "S",
+    "A",
+    "B",
+    "W{c: type_a}"
+  ],
+  "drawing": [
+    {
+      "from": "S",
+      "to": ""
+    },
+    {
+      "from": "A",
+      "to": "W{c: type_a}"
+    },
+    {
+      "from": "B",
+      "to": "W{c: type_b}"
+    },
+    {
+      "from": "W",
+      "to": "[C{color: wall}F{length: (cell_size+gap)*scale,width: 0.5*scale}][C{color: wall}(R{deg: 80.6548450}F{length: 0.1049201*cell_size*scale,width: 0.4*scale}R{deg: -18.0284729}F{length: 0.1086368*cell_size*scale,width: 0.4*scale}R{deg: -16.4321385}F{length: 0.1147898*cell_size*scale,width: 0.4*scale}R{deg: -14.6500681}F{length: 0.1215077*cell_size*scale,width: 0.4*scale}R{deg: -13.2104740}F{length: 0.1270389*cell_size*scale,width: 0.4*scale}R{deg: -12.3213512}F{length: 0.1301253*cell_size*scale,width: 0.4*scale}R{deg: -12.0246806}F{length: 0.1301253*cell_size*scale,width: 0.4*scale}R{deg: -12.3213512}F{length: 0.1270389*cell_size*scale,width: 0.4*scale}R{deg: -13.2104740}F{length: 0.1215077*cell_size*scale,width: 0.4*scale}R{deg: -14.6500681}F{length: 0.1147898*cell_size*scale,width: 0.4*scale}R{deg: -16.4321385}F{length: 0.1086368*cell_size*scale,width: 0.4*scale}R{deg: -18.0284729}F{length: 0.1049201*cell_size*scale,width: 0.4*scale}R{deg: -18.6903100}F{length: 0.1049201*cell_size*scale,width: 0.4*scale}R{deg: -18.0284729}F{length: 0.1086368*cell_size*scale,width: 0.4*scale}R{deg: -16.4321385}F{length: 0.1147898*cell_size*scale,width: 0.4*scale}R{deg: -14.6500681}F{length: 0.1215077*cell_size*scale,width: 0.4*scale}R{deg: -13.2104740}F{length: 0.1270389*cell_size*scale,width: 0.4*scale}R{deg: -12.3213512}F{length: 0.1301253*cell_size*scale,width: 0.4*scale}R{deg: -12.0246806}F{length: 0.1301253*cell_size*scale,width: 0.4*scale}R{deg: -12.3213512}F{length: 0.1270389*cell_size*scale,width: 0.4*scale}R{deg: -13.2104740}F{length: 0.1215077*cell_size*scale,width: 0.4*scale}R{deg: -14.6500681}F{length: 0.1147898*cell_size*scale,width: 0.4*scale}R{deg: -16.4321385}F{length: 0.1086368*cell_size*scale,width: 0.4*scale}R{deg: -18.0284729}F{length: 0.1049201*cell_size*scale,width: 0.4*scale})][M{length: cell_size*0.10*scale}[C{color: c}(R{deg: 80.6548450}F{length: 0.1049201*cell_size*0.8*scale,width: 0.4*scale}R{deg: -18.0284729}F{length: 0.1086368*cell_size*0.8*scale,width: 0.4*scale}R{deg: -16.4321385}F{length: 0.1147898*cell_size*0.8*scale,width: 0.4*scale}R{deg: -14.6500681}F{length: 0.1215077*cell_size*0.8*scale,width: 0.4*scale}R{deg: -13.2104740}F{length: 0.1270389*cell_size*0.8*scale,width: 0.4*scale}R{deg: -12.3213512}F{length: 0.1301253*cell_size*0.8*scale,width: 0.4*scale}R{deg: -12.0246806}F{length: 0.1301253*cell_size*0.8*scale,width: 0.4*scale}R{deg: -12.3213512}F{length: 0.1270389*cell_size*0.8*scale,width: 0.4*scale}R{deg: -13.2104740}F{length: 0.1215077*cell_size*0.8*scale,width: 0.4*scale}R{deg: -14.6500681}F{length: 0.1147898*cell_size*0.8*scale,width: 0.4*scale}R{deg: -16.4321385}F{length: 0.1086368*cell_size*0.8*scale,width: 0.4*scale}R{deg: -18.0284729}F{length: 0.1049201*cell_size*0.8*scale,width: 0.4*scale}R{deg: -18.6903100}F{length: 0.1049201*cell_size*0.8*scale,width: 0.4*scale}R{deg: -18.0284729}F{length: 0.1086368*cell_size*0.8*scale,width: 0.4*scale}R{deg: -16.4321385}F{length: 0.1147898*cell_size*0.8*scale,width: 0.4*scale}R{deg: -14.6500681}F{length: 0.1215077*cell_size*0.8*scale,width: 0.4*scale}R{deg: -13.2104740}F{length: 0.1270389*cell_size*0.8*scale,width: 0.4*scale}R{deg: -12.3213512}F{length: 0.1301253*cell_size*0.8*scale,width: 0.4*scale}R{deg: -12.0246806}F{length: 0.1301253*cell_size*0.8*scale,width: 0.4*scale}R{deg: -12.3213512}F{length: 0.1270389*cell_size*0.8*scale,width: 0.4*scale}R{deg: -13.2104740}F{length: 0.1215077*cell_size*0.8*scale,width: 0.4*scale}R{deg: -14.6500681}F{length: 0.1147898*cell_size*0.8*scale,width: 0.4*scale}R{deg: -16.4321385}F{length: 0.1086368*cell_size*0.8*scale,width: 0.4*scale}R{deg: -18.0284729}F{length: 0.1049201*cell_size*0.8*scale,width: 0.4*scale})]][M{length: cell_size*0.5*scale}C{color: nucleus}M{length: -cell_size*0.13*scale}L{size: cell_size*0.13*scale}]M{length: (cell_size+gap)*scale}"
+    }
+  ],
+  "rules": [
+    {
+      "from": "S",
+      "to": "M{length: 70*scale}R{deg: 90}M{length: origin_x*scale}A"
+    },
+    {
+      "from": "A",
+      "to": "AB"
+    },
+    {
+      "from": "B",
+      "to": "A"
+    }
+  ]
+}

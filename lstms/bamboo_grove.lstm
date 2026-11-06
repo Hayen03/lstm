@@ -1,0 +1,54 @@
+// Bamboo grove
+// python test.py bamboo_grove.lstm -n 15 --animate
+{
+  "name": "Bamboo grove",
+  "recommended_iterations": 15,
+  "bg": "background",
+  "globals": {
+    "scale": 1,
+    "background": 15856348,
+    "stem": 4814925,
+    "joint": 10860908,
+    "foliage": 2706751
+  },
+  "description": "Five jointed culms with alternating delicate leaf sprays. Change scale and palette in globals; growth ends naturally.",
+  "axiom": "S",
+  "symbols": [
+    "S",
+    "E{u: 1}",
+    "B{n: 10,i: 0,h: 0,u: 1}",
+    "T{n: 3,u: 1,side: 1}"
+  ],
+  "drawing": [
+    {
+      "from": "S",
+      "to": ""
+    },
+    {
+      "from": "E",
+      "to": "[C{color: foliage}L{size: 2*u}M{length: 3*u}L{size: 1.7*u}M{length: 2.5*u}L{size: 1.2*u}M{length: 2*u}L{size: 0.6*u}]"
+    },
+    {
+      "from": "B",
+      "to": "[E{u: 1.2*u}]"
+    },
+    {
+      "from": "T",
+      "to": "E{u: u}"
+    }
+  ],
+  "rules": [
+    {
+      "from": "S",
+      "to": "M{length: 24*scale}[R{deg: 90}M{length: -130*scale}R{deg: -99}B{n: 8,h: -9,u: scale}][R{deg: 90}M{length: -72*scale}R{deg: -95}B{n: 11,h: -5,u: scale}][R{deg: 90}M{length: -15*scale}R{deg: -88}B{n: 10,h: 2,u: scale}][R{deg: 90}M{length: 45*scale}R{deg: -83}B{n: 9,h: 7,u: scale}][R{deg: 90}M{length: 105*scale}R{deg: -78}B{n: 7,h: 12,u: scale}]"
+    },
+    {
+      "from": "B{n: fn v -> v > 0}",
+      "to": "C{color: stem}F{length: (29+n*0.8)*u,width: (3+n*0.35)*u}[R{deg: -90}M{length: (1.5+n*0.175)*u}R{deg: 180}C{color: joint}F{length: (3+n*0.35)*u,width: 2*u}][R{deg: -58}T{n: 2 if i%2 == 0 else 0,u: u,side: -1}][R{deg: 55}T{n: 3 if i%2 == 1 else 0,u: u,side: 1}]B{n: n-1,i: i+1,h: h,u: u}"
+    },
+    {
+      "from": "T{n: fn v -> v > 0}",
+      "to": "C{color: stem}F{length: 9*u,width: 0.8*u}[R{deg: -32}E{u: 1.25*u}][R{deg: 35}E{u: 1.1*u}]R{deg: side*13}T{n: n-1,u: u,side: side}"
+    }
+  ]
+}

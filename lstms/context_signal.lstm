@@ -1,0 +1,33 @@
+// python test.py examples/context_signal.lstm -n 9 --animate
+{
+  name: "Context signal through branches",
+  bg: "#172936",
+  recommended_iterations: 9,
+  globals: {step: "28", dormant: "#52646F", active: "#90D9AE", tip: "#F4C96B"},
+  axiom: "M{length: 24}A B B[R{deg: -40}B B B][R{deg: 40}B B B]B B B",
+  symbols: [
+    "A{level: 0}",
+    "B",
+    "T"
+  ],
+  "drawing": [
+    {
+      "from": "A",
+      "to": "C{color: active}F{length: step,width: 3}"
+    },
+    {
+      "from": "B",
+      "to": "C{color: dormant}F{length: step,width: 3}"
+    },
+    {
+      "from": "T",
+      "to": "C{color: active}F{length: step,width: 3}[C{color: tip}L{size: 5}]"
+    }
+  ],
+  rules: [
+    // One hop per generation, based on the unchanged previous generation.
+    {from: "A{level: _} < B", to: "A{level: lctx(-1)[0].args.level + 1}"},
+    // Only actual branch tips flower. A sibling is never a continuation.
+    {from: "A > $", to: "T"},
+  ],
+}

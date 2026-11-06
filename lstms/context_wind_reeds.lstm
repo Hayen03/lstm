@@ -1,0 +1,132 @@
+// python test.py context_wind_reeds.lstm --animate -n 300
+// Flat left-to-right growth sequence; brackets exist ONLY in drawing macros.
+// W < plant applies before the less-specific unforced plant rule.
+// Old W disappears; its neighbour emits the successor W on its right.
+{
+  "name": "A breeze through the reeds",
+  "description": "Random wind tokens travel one plant per generation. Context rules deliver impulses; each reed sways and settles independently.",
+  "recommended_iterations": 300,
+  "bg": "#203B42",
+  "globals": {
+    "gust_chance": "0.28",
+    "rest_min": "7",
+    "rest_range": "9",
+    "gust_min": "5",
+    "gust_max": "10",
+    "attenuation": "0.985",
+    "damping": "0.90",
+    "stiffness": "0.065",
+    "max_bend": "48",
+    "velocity": "fn b,v,flex,push -> (damping*v-stiffness*b/flex+push*flex).clamp(-12,12)"
+  },
+  "axiom": "M{length:80}ZSE{x:-384.345,h:159.894,c:#738D69,flex:0.9460,lean:-3.079}A{x:-352.976,h:212.027,c:#8F9F70,flex:1.0262,lean:-0.025}E{x:-312.676,h:196.427,c:#587F6B,flex:1.0022,lean:4.676}A{x:-279.565,h:212.448,c:#AFB57E,flex:1.0268,lean:-6.817}J{x:-253.89,h:157.595,c:#738D69,flex:0.9425,lean:-0.637}A{x:-215.826,h:290.586,c:#8F9F70,flex:1.1471,lean:-6.368}E{x:-187.473,h:222.252,c:#587F6B,flex:1.0419,lean:-4.764}A{x:-159.146,h:290.093,c:#AFB57E,flex:1.1463,lean:-2.795}E{x:-118.326,h:178.266,c:#738D69,flex:0.9743,lean:-5.936}A{x:-89.752,h:304.475,c:#8F9F70,flex:1.1684,lean:-2.115}J{x:-54.353,h:146.436,c:#587F6B,flex:0.9253,lean:-3.121}A{x:-16.861,h:214.922,c:#AFB57E,flex:1.0306,lean:-0.698}E{x:7.384,h:165.497,c:#738D69,flex:0.9546,lean:5.598}A{x:39.325,h:303.615,c:#8F9F70,flex:1.1671,lean:-0.405}E{x:83.239,h:251.284,c:#587F6B,flex:1.0866,lean:-6.771}A{x:116.324,h:277.078,c:#AFB57E,flex:1.1263,lean:3.175}J{x:137.475,h:143.127,c:#738D69,flex:0.9202,lean:3.100}A{x:182.507,h:281.470,c:#8F9F70,flex:1.1330,lean:-6.443}E{x:211.159,h:224.890,c:#587F6B,flex:1.0460,lean:-5.186}A{x:246.324,h:214.362,c:#AFB57E,flex:1.0298,lean:1.218}E{x:276.718,h:258.536,c:#738D69,flex:1.0977,lean:-4.648}A{x:304.07,h:291.177,c:#8F9F70,flex:1.1480,lean:-0.236}J{x:346.853,h:109.580,c:#587F6B,flex:0.8686,lean:2.238}A{x:369.993,h:321.808,c:#AFB57E,flex:1.1951,lean:-1.861}",
+  "symbols": [
+    "O{r:3,c:#FFFFFF}",
+    "V{s:30,c:#718B66}",
+    "B{h:240,b:0,c:#718B66,v:0}",
+    "T",
+    "G",
+    "K",
+    "Z",
+    "A{x:0,h:240,b:0,v:0,c:#718B66,flex:1,lean:0}",
+    "E{x:0,h:240,b:0,v:0,c:#718B66,flex:1,lean:0}",
+    "J{x:0,h:240,b:0,v:0,c:#718B66,flex:1,lean:0}",
+    "S{wait:3,q:0}",
+    "W{strength:8}"
+  ],
+  "drawing": [
+    {
+      "from": "O",
+      "to": "[C{color:c}M{length:-r}L{size:r}]"
+    },
+    {
+      "from": "V",
+      "to": "[C{color:c}(F{length:s/6,width:0.7}R{deg:4}F{length:s/6,width:0.7}R{deg:4}F{length:s/6,width:0.7}R{deg:4}F{length:s/6,width:0.7}R{deg:4}F{length:s/6,width:0.7}R{deg:4}F{length:s/6,width:0.7}R{deg:4}R{deg:156}F{length:s/6,width:0.7}R{deg:4}F{length:s/6,width:0.7}R{deg:4}F{length:s/6,width:0.7}R{deg:4}F{length:s/6,width:0.7}R{deg:4}F{length:s/6,width:0.7}R{deg:4}F{length:s/6,width:0.7}R{deg:4}R{deg:156})]"
+    },
+    {
+      "from": "B",
+      "to": "R{deg:b*0.01818}C{color:c}F{length:h/10,width:3.20}R{deg:b*0.03636}C{color:c}F{length:h/10,width:2.97}R{deg:b*0.05455}C{color:c}F{length:h/10,width:2.74}[R{deg:-1*(48+1.2*v)}V{s:h*0.260,c:c}]R{deg:b*0.07273}C{color:c}F{length:h/10,width:2.51}R{deg:b*0.09091}C{color:c}F{length:h/10,width:2.28}[R{deg:1*(48+1.2*v)}V{s:h*0.230,c:c}]R{deg:b*0.10909}C{color:c}F{length:h/10,width:2.05}R{deg:b*0.12727}C{color:c}F{length:h/10,width:1.82}[R{deg:-1*(48+1.2*v)}V{s:h*0.200,c:c}]R{deg:b*0.14545}C{color:c}F{length:h/10,width:1.59}R{deg:b*0.16364}C{color:c}F{length:h/10,width:1.36}R{deg:b*0.18182}C{color:c}F{length:h/10,width:1.13}"
+    },
+    {
+      "from": "T",
+      "to": "[C{color:#5B392F}F{length:32,width:10}O{r:5,c:#5B392F}M{length:-32}O{r:5,c:#5B392F}C{color:#BB8856}F{length:27,width:3}M{length:5}C{color:#C7B785}F{length:9,width:1}]"
+    },
+    {
+      "from": "G",
+      "to": "[C{color:#BDA674}[R{deg:-40}V{s:13,c:#CCBA87}][R{deg:40}V{s:11,c:#B6A773}]F{length:5,width:1}[R{deg:-40}V{s:13,c:#CCBA87}][R{deg:40}V{s:11,c:#B6A773}]F{length:5,width:1}[R{deg:-40}V{s:13,c:#CCBA87}][R{deg:40}V{s:11,c:#B6A773}]F{length:5,width:1}[R{deg:-40}V{s:13,c:#CCBA87}][R{deg:40}V{s:11,c:#B6A773}]F{length:5,width:1}[R{deg:-40}V{s:13,c:#CCBA87}][R{deg:40}V{s:11,c:#B6A773}]F{length:5,width:1}[R{deg:-40}V{s:13,c:#CCBA87}][R{deg:40}V{s:11,c:#B6A773}]F{length:5,width:1}V{s:12,c:#DED0A2}]"
+    },
+    {
+      "from": "K",
+      "to": "[R{deg:0}M{length:4}O{r:3.7,c:#E8B890}][R{deg:72}M{length:4}O{r:3.7,c:#E8B890}][R{deg:144}M{length:4}O{r:3.7,c:#E8B890}][R{deg:216}M{length:4}O{r:3.7,c:#E8B890}][R{deg:288}M{length:4}O{r:3.7,c:#E8B890}]O{r:2.5,c:#E2C966}"
+    },
+    {
+      "from": "Z",
+      "to": "[M{length:415}R{deg:-90}M{length:295}O{r:28,c:#DEC9A2}][M{length:-10}R{deg:90}M{length:-420}C{color:#31565A}F{length:840,width:2}][M{length:-26}R{deg:90}M{length:-390}C{color:#31565A}F{length:150,width:2}][M{length:-28}R{deg:90}M{length:-120}C{color:#31565A}F{length:240,width:2}][M{length:-42}R{deg:90}M{length:-280}C{color:#31565A}F{length:185,width:2}][M{length:-47}R{deg:90}M{length:90}C{color:#31565A}F{length:230,width:2}][M{length:-65}R{deg:90}M{length:-410}C{color:#31565A}F{length:270,width:2}][M{length:-74}R{deg:90}M{length:20}C{color:#31565A}F{length:170,width:2}][R{deg:90}M{length:-430}C{color:#526B57}F{length:860,width:4}]"
+    },
+    {
+      "from": "A",
+      "to": "[R{deg:90}M{length:x}R{deg:-90}R{deg:lean}B{h:h,b:b,c:c,v:v}T]"
+    },
+    {
+      "from": "E",
+      "to": "[R{deg:90}M{length:x}R{deg:-90}R{deg:lean}B{h:h,b:b,c:c,v:v}G]"
+    },
+    {
+      "from": "J",
+      "to": "[R{deg:90}M{length:x}R{deg:-90}R{deg:lean}B{h:h,b:b,c:c,v:v}K]"
+    },
+    {
+      "from": "S",
+      "to": ""
+    },
+    {
+      "from": "W",
+      "to": ""
+    }
+  ],
+  "rules": [
+    {
+      "from": "S",
+      "cond": "wait>0",
+      "to": "S{wait:wait-1,q:random()}"
+    },
+    {
+      "from": "S",
+      "cond": "wait==0 && q<gust_chance",
+      "to": "S{wait:rest_min+int(random()*rest_range),q:random()}W{strength:gust_min+random()*(gust_max-gust_min)}"
+    },
+    {
+      "from": "S",
+      "cond": "wait==0 && q>=gust_chance",
+      "to": "S{q:random(),wait:0}"
+    },
+    {
+      "from": "W",
+      "to": ""
+    },
+    {
+      "from": "W < A",
+      "to": "A{x:x,h:h,b:(b+velocity(b,v,flex,lctx(-1)[0].args.strength)).clamp(-max_bend,max_bend),v:velocity(b,v,flex,lctx(-1)[0].args.strength),c:c,flex:flex,lean:lean}W{strength:lctx(-1)[0].args.strength*attenuation}"
+    },
+    {
+      "from": "A",
+      "to": "A{x:x,h:h,b:(b+velocity(b,v,flex,0)).clamp(-max_bend,max_bend),v:velocity(b,v,flex,0),c:c,flex:flex,lean:lean}"
+    },
+    {
+      "from": "W < E",
+      "to": "E{x:x,h:h,b:(b+velocity(b,v,flex,lctx(-1)[0].args.strength)).clamp(-max_bend,max_bend),v:velocity(b,v,flex,lctx(-1)[0].args.strength),c:c,flex:flex,lean:lean}W{strength:lctx(-1)[0].args.strength*attenuation}"
+    },
+    {
+      "from": "E",
+      "to": "E{x:x,h:h,b:(b+velocity(b,v,flex,0)).clamp(-max_bend,max_bend),v:velocity(b,v,flex,0),c:c,flex:flex,lean:lean}"
+    },
+    {
+      "from": "W < J",
+      "to": "J{x:x,h:h,b:(b+velocity(b,v,flex,lctx(-1)[0].args.strength)).clamp(-max_bend,max_bend),v:velocity(b,v,flex,lctx(-1)[0].args.strength),c:c,flex:flex,lean:lean}W{strength:lctx(-1)[0].args.strength*attenuation}"
+    },
+    {
+      "from": "J",
+      "to": "J{x:x,h:h,b:(b+velocity(b,v,flex,0)).clamp(-max_bend,max_bend),v:velocity(b,v,flex,0),c:c,flex:flex,lean:lean}"
+    }
+  ]
+}

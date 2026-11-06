@@ -1,0 +1,240 @@
+// One seed. The growth rules sample every axis, bend and fork.
+{
+  "name": "Crookwood \u2014 from one seed",
+  "width": 1200,
+  "height": 780,
+  "bg": "#F7F5EF",
+  "recommended_iterations": 190,
+  "seed": "crookwood-11",
+  "description": "Roots and crown grow from S. Each internode samples its own displacement and bend at birth, extends over several frames, then thickens.",
+  "globals": {
+    "ground": "-295",
+    "wave": "fn t -> let z=1-abs(4*(t%1)-2) for z*(1.5-0.5*z*z)",
+    "duration": "fn d -> max(3,8-d)",
+    "mix": "fn a,b,t -> a+(b-a)*t",
+    "pt": "fn x,dx,n,k,t -> x+dx*t+n*k*4*t*(1-t)",
+    "gauge": "fn age,cap -> 0.65+(max(0.45,cap)-0.65)*age/(age+30)",
+    "cold": "[#322E2D,#49423E,#5B5149,#72665B]",
+    "warm": "[#45372F,#655141,#846A50,#9A8264]",
+    "low": "fn q -> 2+int(q*2)",
+    "high": "fn q -> 4+int(q*2)"
+  },
+  "axiom": "S",
+  "symbols": [
+    "S",
+    "N{x:0,y:ground,d:0,i:0,lim:6,side:1,cap:86,q:0.5}",
+    "A{x:0,y:ground,dx:0,dy:30,k:0,d:0,i:0,lim:6,side:1,cap:86,q:0.5,born:0}",
+    "B{x:0,y:ground,dx:0,dy:30,k:0,d:0,cap:86,q:0.5,born:0}",
+    "T{x:0,y:ground,d:0,i:0,lim:6,side:1,cap:86,q:0.5}",
+    "g{j:0,n:6,x:0,y:0,dx:0,dy:1,nx:1,ny:0,k:0,w:1,q:0.5,t:1,c:#443C35,lane:0,sw:1}"
+  ],
+  "rules": [
+    {
+      "name": "Germinate",
+      "from": "S",
+      "to": "N{side:lean,lim:5+int(random()*3),q:random()}N{d:-1,side:-1,lim:6+int(random()*3),cap:38,q:random()}N{d:-1,side:1,lim:5+int(random()*4),cap:44,q:random()}",
+      "locals": {
+        "lean": "-1 if random()<0.5 else 1"
+      }
+    },
+    {
+      "name": "Lift an exposed root",
+      "from": "N",
+      "to": "A{x:x,y:y,d:d,i:i,lim:lim,side:side,cap:cap,q:q,dx:ex-x,dy:ey-y,k:curl,born:gen()}",
+      "cond": "d<0",
+      "locals": {
+        "vx": "side*(30+random()*18)",
+        "vy": "(ground-y)*0.65+(random()-0.48)*16",
+        "ex": "(x+vx).clamp(-535,535)",
+        "ey": "(y+vy).clamp(ground-15,335)",
+        "curl": "(random()-0.45)*19"
+      }
+    },
+    {
+      "name": "Twist the leader",
+      "from": "N",
+      "to": "A{x:x,y:y,d:d,i:i,lim:lim,side:side,cap:cap,q:q,dx:ex-x,dy:ey-y,k:curl,born:gen()}",
+      "cond": "d==0",
+      "locals": {
+        "vx": "side*(28+random()*55)",
+        "vy": "30+random()*29",
+        "ex": "(x+vx).clamp(-535,535)",
+        "ey": "(y+vy).clamp(ground-15,335)",
+        "curl": "side*(16+random()*27)"
+      }
+    },
+    {
+      "name": "Reach sideways, then hook",
+      "from": "N",
+      "to": "A{x:x,y:y,d:d,i:i,lim:lim,side:side,cap:cap,q:q,dx:ex-x,dy:ey-y,k:curl,born:gen()}",
+      "cond": "d>0",
+      "locals": {
+        "vx": "side*(23+random()*36)*0.85.pow(d-1)",
+        "vy": "(random()-0.23)*(41+11*d)*0.83.pow(d-1)",
+        "ex": "(x+vx).clamp(-535,535)",
+        "ey": "(y+vy).clamp(ground-15,335)",
+        "curl": "(random()-0.5)*39*0.75.pow(d-1)"
+      }
+    },
+    {
+      "name": "Set wood and bud at its tip",
+      "from": "A",
+      "to": "B{x:x,y:y,dx:dx,dy:dy,k:k,d:d,cap:cap,q:q,born:born}T{x:x+dx,y:y+dy,d:d,i:i+1,lim:lim,side:side,cap:cap,q:q}",
+      "cond": "gen()-born>=duration(d)"
+    },
+    {
+      "name": "Root spreads",
+      "from": "T",
+      "to": "N{x:x,y:y,d:d,i:i,lim:lim,side:side,cap:cap*0.79,q:q}",
+      "cond": "d<0 && i<lim && i!=2"
+    },
+    {
+      "name": "A second rootlet finds another route",
+      "from": "T",
+      "to": "N{x:x,y:y,d:d,i:i,lim:lim,side:side,cap:cap*0.79,q:q}N{x:x,y:y,d:-1,i:3,lim:3+int(random()*2),side:side,cap:cap*0.48,q:random()}",
+      "cond": "d<0 && i==2"
+    },
+    {
+      "name": "Root tip settles",
+      "from": "T",
+      "to": "",
+      "cond": "d<0 && i>=lim"
+    },
+    {
+      "name": "Leader changes its lean",
+      "from": "T",
+      "to": "N{x:x,y:y,d:0,i:i,lim:lim,side:turn,cap:cap*0.88,q:q}",
+      "cond": "d==0 && i<lim && i!=low(q) && i!=high(q) && i!=1",
+      "locals": {
+        "turn": "-side if random()<0.88 else side"
+      }
+    },
+    {
+      "name": "Heavy low bough",
+      "from": "T",
+      "to": "N{x:x,y:y,d:0,i:i,lim:lim,side:turn,cap:cap*0.88,q:q}N{x:x,y:y,d:1,i:0,lim:3+int(random()*3),side:arm,cap:cap*(0.52+0.18*random()),q:random()}",
+      "cond": "d==0 && i<lim && (i==low(q) || i==high(q))",
+      "locals": {
+        "turn": "-side",
+        "arm": "(1 if q<0.5 else -1)*(1 if i==low(q) else -1)"
+      }
+    },
+    {
+      "name": "Last trunk fork",
+      "from": "T",
+      "to": "N{x:x,y:y,d:1,i:0,lim:3+int(random()*3),side:-1,cap:cap*(0.52+0.18*random()),q:random()}N{x:x,y:y,d:1,i:0,lim:3+int(random()*3),side:1,cap:cap*(0.52+0.18*random()),q:random()}",
+      "cond": "d==0 && i>=lim"
+    },
+    {
+      "name": "Uneven lateral fork",
+      "from": "T",
+      "to": "N{x:x,y:y,d:d,i:i,lim:lim,side:axis,cap:cap*0.84,q:q}N{x:x,y:y,d:d+1,i:0,lim:2+int(random()*3),side:arm,cap:cap*(0.46+random()*0.18),q:random()}",
+      "cond": "d>0 && d<4 && i<lim",
+      "locals": {
+        "axis": "(-1 if x>0 else 1) if abs(x)>455 else side",
+        "arm": "axis if random()<0.52 else -axis"
+      },
+      "weight": 3
+    },
+    {
+      "name": "Crooked continuation",
+      "from": "T",
+      "to": "N{x:x,y:y,d:d,i:i,lim:lim,side:axis,cap:cap*0.84,q:q}",
+      "cond": "d>0 && i<lim",
+      "locals": {
+        "axis": "(-1 if x>0 else 1) if abs(x)>455 else side",
+        "arm": "axis if random()<0.52 else -axis"
+      },
+      "weight": 3
+    },
+    {
+      "name": "Fine crown division",
+      "from": "T",
+      "to": "N{x:x,y:y,d:d+1,i:0,lim:2+int(random()*2),side:-1,cap:cap*0.54,q:random()}N{x:x,y:y,d:d+1,i:0,lim:2+int(random()*2),side:1,cap:cap*0.62,q:random()}",
+      "cond": "d>0 && d<4 && i>=lim"
+    },
+    {
+      "name": "Weathered terminal",
+      "from": "T",
+      "to": "",
+      "cond": "d==4 && i>=lim"
+    },
+    {
+      "name": "Buttress roots descend from the first bend",
+      "from": "T",
+      "to": "N{x:x,y:y,d:0,i:i,lim:lim,side:turn,cap:cap*0.88,q:q}N{x:x,y:y,d:-1,i:0,lim:4+int(random()*3),side:-1,cap:cap*0.47,q:random()}N{x:x,y:y,d:-1,i:0,lim:4+int(random()*3),side:1,cap:cap*0.39,q:random()}",
+      "cond": "d==0 && i==1",
+      "locals": {
+        "turn": "-side"
+      }
+    }
+  ],
+  "drawing": [
+    {
+      "name": "Seed",
+      "from": "S",
+      "to": "[P{x:0,y:ground}C{color:#65513E}L{size:3}]"
+    },
+    {
+      "name": "Extend visible wood",
+      "from": "A",
+      "to": "g{x:x,y:y,dx:dx,dy:dy,nx:-dy/length,ny:dx/length,k:k,w:w,q:q,t:t,n:n,c:c[0],lane:0,sw:1}g{x:x,y:y,dx:dx,dy:dy,nx:-dy/length,ny:dx/length,k:k,w:w,q:q,t:t,n:n,c:c[1],lane:-0.13,sw:0.53}g{x:x,y:y,dx:dx,dy:dy,nx:-dy/length,ny:dx/length,k:k,w:w,q:q,t:t,n:n,c:c[2],lane:0.19,sw:0.18}g{x:x,y:y,dx:dx,dy:dy,nx:-dy/length,ny:dx/length,k:k,w:w,q:q,t:t,n:n,c:c[3],lane:-0.29,sw:0.068}g{x:x,y:y,dx:dx,dy:dy,nx:-dy/length,ny:dx/length,k:k,w:w,q:q,t:t,n:n,c:c[3],lane:0.04,sw:0.041}",
+      "locals": {
+        "age": "max(0,gen()-born)",
+        "length": "max(0.01,pow(dx*dx+dy*dy,0.5))",
+        "w": "gauge(age,cap)",
+        "t": "min(1,(age+0.1)/duration(d))",
+        "n": "7 if d<2 else (4 if d==2 else 2)",
+        "c": "warm if d<=0 else cold"
+      }
+    },
+    {
+      "name": "Thicken persistent wood",
+      "from": "B",
+      "to": "g{x:x,y:y,dx:dx,dy:dy,nx:-dy/length,ny:dx/length,k:k,w:w,q:q,t:t,n:n,c:c[0],lane:0,sw:1}g{x:x,y:y,dx:dx,dy:dy,nx:-dy/length,ny:dx/length,k:k,w:w,q:q,t:t,n:n,c:c[1],lane:-0.13,sw:0.53}g{x:x,y:y,dx:dx,dy:dy,nx:-dy/length,ny:dx/length,k:k,w:w,q:q,t:t,n:n,c:c[2],lane:0.19,sw:0.18}g{x:x,y:y,dx:dx,dy:dy,nx:-dy/length,ny:dx/length,k:k,w:w,q:q,t:t,n:n,c:c[3],lane:-0.29,sw:0.068}g{x:x,y:y,dx:dx,dy:dy,nx:-dy/length,ny:dx/length,k:k,w:w,q:q,t:t,n:n,c:c[3],lane:0.04,sw:0.041}",
+      "locals": {
+        "age": "max(0,gen()-born)",
+        "length": "max(0.01,pow(dx*dx+dy*dy,0.5))",
+        "w": "gauge(age,cap)",
+        "t": "1",
+        "n": "7 if d<2 else (4 if d==2 else 2)",
+        "c": "warm if d<=0 else cold"
+      }
+    },
+    {
+      "name": "Root collar bud",
+      "from": "N",
+      "to": "[P{x:x,y:y}C{color:#584435}L{size:1.4}]"
+    },
+    {
+      "name": "Resting terminal bud",
+      "from": "T",
+      "to": "[P{x:x,y:y}C{color:#584435}L{size:0.9}]"
+    },
+    {
+      "name": "Follow the grain from end to end",
+      "from": "g",
+      "to": "[P{x:sx-z1*v1/len1,y:sy+z1*h1/len1}C{color:c}D{x:ex-z2*v2/len2,y:ey+z2*h2/len2,width:max(0.5,wid*sw)}]g{x:x,y:y,dx:dx,dy:dy,nx:nx,ny:ny,k:k,w:w,q:q,t:t,n:n,c:c,lane:lane,sw:sw,j:j+1}",
+      "cond": "j/n<t && (sw==1 || w>=4)",
+      "locals": {
+        "u": "j/n",
+        "v": "min(t,(j+1)/n)",
+        "sx": "pt(x,dx,nx,k,u)",
+        "sy": "pt(y,dy,ny,k,u)",
+        "ex": "pt(x,dx,nx,k,v)",
+        "ey": "pt(y,dy,ny,k,v)",
+        "wid": "max(0.55,w*(1-0.22*u))",
+        "tw1": "0.13*wave(q+u*0.8)",
+        "tw2": "0.13*wave(q+v*0.8)",
+        "z1": "(lane+tw1)*wid if sw<1 else 0",
+        "z2": "(lane+tw2)*max(0.45,w*(1-0.22*v)) if sw<1 else 0",
+        "h1": "dx+nx*k*4*(1-2*u)",
+        "v1": "dy+ny*k*4*(1-2*u)",
+        "h2": "dx+nx*k*4*(1-2*v)",
+        "v2": "dy+ny*k*4*(1-2*v)",
+        "len1": "max(0.001,pow(h1*h1+v1*v1,0.5))",
+        "len2": "max(0.001,pow(h2*h2+v2*v2,0.5))"
+      }
+    }
+  ]
+}

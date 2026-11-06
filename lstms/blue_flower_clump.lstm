@@ -1,0 +1,76 @@
+{
+  "name": "Blue Flower Clump",
+  "recommended_iterations": 9,
+  "description": "Nine rising stems carrying paired leaves and branching sprays of light-blue five-petaled flowers.",
+  "notes": [
+    "Stem length and initial lean differ across the clump, giving an uneven natural skyline.",
+    "At the fourth node, each stem adds two independently terminating flower sprays.",
+    "Flower styling uses list destructuring, slices, and null coalescing."
+  ],
+  "axiom": "S",
+  "symbols": [
+    "S{scale: 1}",
+    "d{r: 1, c: #FFFFFF}",
+    "E{r: 3, c: #4F8B42}",
+    "B{r: 3, c: #B8DFF5, center: #E8C86A}",
+    "G{r: 3, c: #F4B4CE, center: #DCA441}",
+    "T{n: 7, length: 40, h: 0, side: 1, id: 1, u: 1}",
+    "Q{n: 2, length: 23, id: 1, u: 1}"
+  ],
+  "drawing": [
+    {
+      "from": "S",
+      "to": ""
+    },
+    {
+      "from": "d",
+      "to": "[C{color: c}M{length: -r}L{size: r}]"
+    },
+    {
+      "from": "E",
+      "to": "[[M{length: r * 0.7}d{r: r * 0.7, c: c}][M{length: r * 1.5}d{r: r * 0.95, c: c}][M{length: r * 2.3}d{r: r * 0.65, c: c}]C{color: #739653}F{length: r * 2.8, width: max(0.4, r * 0.13)}]"
+    },
+    {
+      "from": "B",
+      "to": "[[R{deg: 0.0}M{length: r * 1.25}d{r: r, c: c}][R{deg: 72.0}M{length: r * 1.25}d{r: r, c: c}][R{deg: 144.0}M{length: r * 1.25}d{r: r, c: c}][R{deg: 216.0}M{length: r * 1.25}d{r: r, c: c}][R{deg: 288.0}M{length: r * 1.25}d{r: r, c: c}]d{r: r * 0.46, c: center}]"
+    },
+    {
+      "from": "G",
+      "to": "[B{r: r, c: c, center: center}[R{deg: -65}M{length: r * 3.1}B{r: r * 0.8, c: c, center: center}][R{deg: 65}M{length: r * 3.1}B{r: r * 0.9, c: c, center: center}]]"
+    },
+    {
+      "from": "T",
+      "to": "E{r: 3 * u}B{r: 3 * u, c: #B8DFF5}"
+    },
+    {
+      "from": "Q",
+      "to": "B{r: 3 * u, c: #B8DFF5}"
+    }
+  ],
+  "rules": [
+    {
+      "from": "S",
+      "to": "M{length: 25 * scale}[R{deg: -30}T{n: 7, length: 34 * scale, h: -30, side: -1, id: 1, u: scale}][R{deg: -22}T{n: 7, length: 40 * scale, h: -22, side: -1, id: 2, u: scale}][R{deg: -14}T{n: 7, length: 44 * scale, h: -14, side: -1, id: 3, u: scale}][R{deg: -7}T{n: 7, length: 37 * scale, h: -7, side: -1, id: 4, u: scale}][R{deg: 0}T{n: 7, length: 46 * scale, h: 0, side: 1, id: 5, u: scale}][R{deg: 7}T{n: 7, length: 42 * scale, h: 7, side: 1, id: 6, u: scale}][R{deg: 14}T{n: 7, length: 39 * scale, h: 14, side: 1, id: 7, u: scale}][R{deg: 22}T{n: 7, length: 43 * scale, h: 22, side: 1, id: 8, u: scale}][R{deg: 30}T{n: 7, length: 33 * scale, h: 30, side: 1, id: 9, u: scale}]"
+    },
+    {
+      "from": "T{n: fn v -> v > 0 && v != 4}",
+      "to": "C{color: #4E844F}F{length: length, width: max(0.8 * u, (0.8 + n * 0.25) * u)}[R{deg: -55}E{r: (2.6 + n * 0.25) * u, c: #65A263}][R{deg: 55}E{r: (2.2 + n * 0.2) * u, c: #3F8052}]R{deg: -h * 0.12}T{n: n - 1, length: length * 0.96, h: h * 0.88, side: side, id: id, u: u}"
+    },
+    {
+      "from": "T{n: 4}",
+      "to": "C{color: #4E844F}F{length: length, width: max(0.8 * u, (0.8 + n * 0.25) * u)}[R{deg: -55}E{r: (2.6 + n * 0.25) * u, c: #65A263}][R{deg: 55}E{r: (2.2 + n * 0.2) * u, c: #3F8052}][R{deg: -42}Q{length: 25 * u, id: id * 2, u: u}][R{deg: 42}Q{length: 22 * u, id: id * 2 + 1, u: u}]R{deg: -h * 0.12}T{n: n - 1, length: length * 0.96, h: h * 0.88, side: side, id: id, u: u}"
+    },
+    {
+      "from": "T{n: 0}",
+      "to": "G{r: (4.0 + id % 3 * 0.3) * u, c: [#BEDFF3, #A8D3EE, #D1EAF9][id % 3], center: #F0D887}"
+    },
+    {
+      "from": "Q{n: fn v -> v > 0}",
+      "to": "C{color: #689B67}F{length: length, width: 0.8 * u}[R{deg: -22}Q{n: n - 1, length: length * 0.65, id: id * 2, u: u}][R{deg: 22}Q{n: n - 1, length: length * 0.65, id: id * 2 + 1, u: u}]"
+    },
+    {
+      "from": "Q{n: 0}",
+      "to": "B{r: let [small, large] = [3.2, 3.8] for (small if id % 2 == 0 else large) * u, c: [#A8D3EE, #BEDFF3, #D1EAF9][1:].tryget(id % 3) ?? #B8DFF5}"
+    }
+  ]
+}

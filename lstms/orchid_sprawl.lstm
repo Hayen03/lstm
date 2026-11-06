@@ -1,0 +1,93 @@
+{
+  name: "Orchidée rampante",
+  description: "Orchid vines sprawling across the canvas, with leaves and flower spikes.",
+  recommended_iterations: 12,
+  bg: "#FBF7F2",
+  axiom: "C{color: #3E6B2F}\
+    [H{rot: 165}A{n: 8, len: 34, w: 4}]\
+    [H{rot: 125}A{n: 8, len: 38, w: 4}]\
+    [H{rot: 90}A{n: 7, len: 40, w: 5}]\
+    [H{rot: 55}A{n: 8, len: 38, w: 4}]\
+    [H{rot: 15}A{n: 8, len: 34, w: 4}]",
+  symbols: [
+    "A{n: 0, len: 20, w: 2}",
+    "S{n: 0, len: 10}",
+    "O{s: 8}",
+    "Q{a: 6}",
+    "K{s: 20}",
+    "Z{r: 3, c: #FFFFFF}",
+  ],
+  rules: [
+    {
+      name: "stem with leaf",
+      from: "A{n: fn x -> x > 0}",
+      to: "F{length: len, width: w}R{deg: random()*36 - 18}\
+           [R{deg: 50 if n % 2 == 0 else -50}K{s: len*0.7}]\
+           A{n: n-1, len: len*0.92, w: max(1, w*0.82)}",
+      weight: 3,
+    },
+    {
+      name: "stem with flower spike",
+      from: "A{n: fn x -> x > 0}",
+      to: "F{length: len, width: w}R{deg: random()*24 - 12}\
+           [R{deg: -35 if n % 2 == 0 else 35}S{n: 4, len: len*0.45}]\
+           [R{deg: 40 if n % 2 == 0 else -40}K{s: len*0.6}]\
+           A{n: n-1, len: len*0.9, w: max(1, w*0.8)}",
+      weight: 2,
+    },
+    {
+      name: "tip becomes spike",
+      from: "A{n: 0}",
+      to: "S{n: 4, len: len*0.7}",
+    },
+    {
+      name: "spike grows",
+      from: "S{n: fn x -> x > 0}",
+      to: "F{length: len, width: 1.5}\
+           [R{deg: 65 if n % 2 == 0 else -65}F{length: 4, width: 1}O{s: 6 + len*0.5}]\
+           R{deg: 14 if n % 2 == 0 else -14}\
+           S{n: n-1, len: len*0.85}",
+    },
+    {
+      name: "spike ends in flower",
+      from: "S{n: 0}",
+      to: "F{length: 4, width: 1}O{s: 7}",
+    },
+  ],
+  drawing: [
+    {
+      name: "orchid flower",
+      from: "O",
+      to: "[C{color: #F4D3EA}Q{a: s}R{deg: 72}Q{a: s}R{deg: 72}Q{a: s*0.85}R{deg: 72}Q{a: s*0.85}R{deg: 72}Q{a: s}]\
+           [R{deg: 180}M{length: s*0.3}Z{r: s*0.35, c: #B02A6B}]\
+           Z{r: s*0.15, c: #FFE066}",
+    },
+    {
+      name: "filled petal (rhombus)",
+      from: "Q",
+      to: "[(R{deg: -30}F{length: a, width: 1}R{deg: 60}F{length: a, width: 1}\
+            R{deg: 120}F{length: a, width: 1}R{deg: 60}F{length: a, width: 1})]",
+    },
+    {
+      name: "filled leaf",
+      from: "K",
+      to: "[C{color: #4F8A3A}(R{deg: -20}F{length: s*0.5, width: 1}R{deg: 20}F{length: s*0.5, width: 1}\
+            R{deg: 160}F{length: s*0.5, width: 1}R{deg: 20}F{length: s*0.5, width: 1})]",
+    },
+    {
+      name: "unfinished bud",
+      from: "A",
+      to: "Z{r: 2.5, c: #E7A6C9}",
+    },
+    {
+      name: "unfinished spike bud",
+      from: "S",
+      to: "Z{r: 2.5, c: #E7A6C9}",
+    },
+    {
+      name: "centred disc",
+      from: "Z",
+      to: "[C{color: c}M{length: -r}L{size: r}]",
+    },
+  ],
+}

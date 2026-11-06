@@ -1,0 +1,225 @@
+// Wild grape. Run with --animate, or export the final frame at -n 205.
+{
+  "name": "Wild grape \u2014 over the garden wires",
+  "description": "One vine sprawls across four wire tiers, looping in both directions. Stable lobed foliage, tightening tendrils and ripening bunches.",
+  "width": 1160,
+  "height": 800,
+  "bg": "#F0EEDC",
+  "seed": "muscat-11",
+  "recommended_iterations": 205,
+  "axiom": "ZS",
+  "globals": {
+    "floor_y": "-326",
+    "wave": "fn t -> let v=1-abs(4*((t+0.25)%1)-2) for v*(1.5-0.5*v*v)",
+    "cx": "fn i -> 45*wave(i/7.7)+14*wave(i/3.8)",
+    "cy": "fn i -> floor_y+73*i",
+    "ax": "fn i,x,side,q -> let u=i/steps for x+side*((455+18*q)*u+(79+11*q)*4*u*(1-u)*wave(u*(1.95+q)+q))",
+    "ay": "fn i,y,q,rise -> let u=i/steps for y+rise*u+(52+10*q)*4*u*(1-u)*wave(u*(1.95+q)+q+0.25)",
+    "steps": "28",
+    "ticks": "4",
+    "leaf_scale": "1.16",
+    "grape_scale": "1",
+    "ripen": "32"
+  },
+  "symbols": [
+    "S",
+    "Z",
+    "T{i:0,p:0}",
+    "B{x:0,y:0,ex:0,ey:0,w:3,born:0}",
+    "A{i:0,p:0,x:0,y:0,side:1,q:0,rise:0}",
+    "V{x:0,y:0,ex:0,ey:0,i:0,side:1,q:0,born:0}",
+    "N{s:20,c:#54814A}",
+    "O{r:3,c:#FFFFFF}",
+    "E{s:16,c:#57864D}",
+    "K{n:0,l:3,turn:12}",
+    "J{x:0,y:0,s:1,born:0}",
+    "U{r:3,c:#784363}",
+    "Y{x:0,y:0,a:0,born:0,side:1}"
+  ],
+  "rules": [
+    {
+      "name": "One rooted shoot",
+      "from": "S",
+      "to": "T"
+    },
+    {
+      "name": "Leader extends",
+      "from": "T",
+      "to": "T{i:i,p:p+1}",
+      "cond": "p<6"
+    },
+    {
+      "name": "Opposite scaffolds at alternating nodes",
+      "from": "T",
+      "to": "B{x:cx(i),y:cy(i),ex:cx(i+1),ey:cy(i+1),w:9-i*0.67,born:gen()}A{x:cx(i+1),y:cy(i+1),side:-1,q:random(),rise:lift}A{x:cx(i+1),y:cy(i+1),side:1,q:random(),rise:lift}T{i:i+1}",
+      "cond": "p>=6 && i<7 && i%2==0",
+      "locals": {
+        "lift": "(random()-0.35)*74"
+      }
+    },
+    {
+      "name": "A shorter staggered fork",
+      "from": "T",
+      "to": "B{x:cx(i),y:cy(i),ex:cx(i+1),ey:cy(i+1),w:9-i*0.67,born:gen()}A{x:cx(i+1),y:cy(i+1),side:1 if i%4==1 else -1,q:random(),rise:lift}T{i:i+1}",
+      "cond": "p>=6 && i<7 && i%2==1",
+      "locals": {
+        "lift": "(random()-0.35)*82"
+      }
+    },
+    {
+      "name": "Last pair beneath the crown",
+      "from": "T",
+      "to": "B{x:cx(i),y:cy(i),ex:cx(i+1),ey:cy(i+1),w:9-i*0.67,born:gen()}A{x:cx(i+1),y:cy(i+1),side:-1,q:random(),rise:lift}A{x:cx(i+1),y:cy(i+1),side:1,q:random(),rise:lift}",
+      "cond": "p>=6 && i==7",
+      "locals": {
+        "lift": "-35-random()*30"
+      }
+    },
+    {
+      "name": "Cane extends along a curling path",
+      "from": "A",
+      "to": "A{i:i,p:p+1,x:x,y:y,side:side,q:q,rise:rise}",
+      "cond": "p<ticks-1"
+    },
+    {
+      "name": "Fruit spur",
+      "from": "A",
+      "to": "V{x:sx,y:sy,ex:tx,ey:ty,i:i,side:side,q:q,born:gen()}J{x:tx,y:ty,born:gen(),s:0.8+random()*0.45}A{i:i+1,x:x,y:y,side:side,q:q,rise:rise}",
+      "cond": "p>=ticks-1 && i<steps-1 && i%7==3",
+      "locals": {
+        "sx": "ax(i,x,side,q)",
+        "sy": "ay(i,y,q,rise)",
+        "tx": "ax(i+1,x,side,q)",
+        "ty": "ay(i+1,y,q,rise)"
+      }
+    },
+    {
+      "name": "Coiling tendril",
+      "from": "A",
+      "to": "V{x:sx,y:sy,ex:tx,ey:ty,i:i,side:side,q:q,born:gen()}Y{x:tx,y:ty,a:35+random()*110,born:gen(),side:side}A{i:i+1,x:x,y:y,side:side,q:q,rise:rise}",
+      "cond": "p>=ticks-1 && i<steps-1 && i%4==0 && i%7!=3",
+      "locals": {
+        "sx": "ax(i,x,side,q)",
+        "sy": "ay(i,y,q,rise)",
+        "tx": "ax(i+1,x,side,q)",
+        "ty": "ay(i+1,y,q,rise)"
+      }
+    },
+    {
+      "name": "Leaf node",
+      "from": "A",
+      "to": "V{x:sx,y:sy,ex:tx,ey:ty,i:i,side:side,q:q,born:gen()}A{i:i+1,x:x,y:y,side:side,q:q,rise:rise}",
+      "cond": "p>=ticks-1 && i<steps-1 && i%7!=3 && i%4!=0",
+      "locals": {
+        "sx": "ax(i,x,side,q)",
+        "sy": "ay(i,y,q,rise)",
+        "tx": "ax(i+1,x,side,q)",
+        "ty": "ay(i+1,y,q,rise)"
+      }
+    },
+    {
+      "name": "Curled growing tip",
+      "from": "A",
+      "to": "V{x:sx,y:sy,ex:tx,ey:ty,i:i,side:side,q:q,born:gen()}Y{x:tx,y:ty,a:20+random()*140,born:gen(),side:side}",
+      "cond": "p>=ticks-1 && i==steps-1",
+      "locals": {
+        "sx": "ax(i,x,side,q)",
+        "sy": "ay(i,y,q,rise)",
+        "tx": "ax(i+1,x,side,q)",
+        "ty": "ay(i+1,y,q,rise)"
+      }
+    }
+  ],
+  "drawing": [
+    {
+      "name": "Quiet garden wires",
+      "from": "Z",
+      "to": "[P{x:-525,y:-245}H{rot:0}C{color:#D9D6BD}F{length:1050,width:1}][P{x:-525,y:-99}H{rot:0}C{color:#D9D6BD}F{length:1050,width:1}][P{x:-525,y:47}H{rot:0}C{color:#D9D6BD}F{length:1050,width:1}][P{x:-525,y:193}H{rot:0}C{color:#D9D6BD}F{length:1050,width:1}][P{x:-530,y:floor_y-2}H{rot:0}C{color:#AAA487}F{length:1060,width:2}]"
+    },
+    {
+      "name": "Root bud",
+      "from": "S",
+      "to": "[P{x:0,y:floor_y}O{r:4,c:#70523E}]"
+    },
+    {
+      "name": "Growing leader",
+      "from": "T",
+      "to": "[P{x:cx(i),y:cy(i)}C{color:#88724C}D{x:cx(i+p/6),y:cy(i+p/6),width:7-i*0.56}]"
+    },
+    {
+      "name": "Aged central cane",
+      "from": "B",
+      "to": "[P{x:x,y:y}C{color:#735940}D{x:ex,y:ey,width:w+extra}][P{x:x+1.5,y:y}C{color:#A58A60}D{x:ex+1.5,y:ey,width:1.2}]",
+      "locals": {
+        "extra": "min(5,(gen()-born)*0.09)"
+      }
+    },
+    {
+      "name": "Green advancing tip",
+      "from": "A",
+      "to": "[P{x:ax(i,x,side,q),y:ay(i,y,q,rise)}C{color:#8AA758}D{x:tx,y:ty,width:2}O{r:2,c:#A4B969}]",
+      "locals": {
+        "u": "i+(p+1)/ticks",
+        "tx": "ax(u,x,side,q)",
+        "ty": "ay(u,y,q,rise)"
+      }
+    },
+    {
+      "name": "Leaf-bearing cane",
+      "from": "V",
+      "to": "[P{x:x,y:y}C{color:bark}D{x:ex,y:ey,width:width}[H{rot:ang}N{s:s,c:c1}][H{rot:ang+153}N{s:s*0.88,c:c2}][P{x:(x+ex)/2,y:(y+ey)/2}H{rot:ang+68}N{s:s*0.82,c:c2}]]",
+      "locals": {
+        "age": "gen()-born",
+        "s": "leaf_scale*(20+9*q+4*wave(i/5+q))*min(1,0.12+age/12)",
+        "ang": "(22+146*((i%2)+q)/2)*side",
+        "c1": "#42774D if (i%3)==0 else (#53884D if i%3==1 else #628F50)",
+        "c2": "#749D55 if i%2==0 else #477C51",
+        "width": "2+min(3,age/22)",
+        "bark": "#698350 if age<15 else #87704D"
+      }
+    },
+    {
+      "name": "Leaf petiole and lobed blade",
+      "from": "N",
+      "to": "[C{color:#729054}F{length:s*0.23,width:1.2}E{s:s,c:c}]"
+    },
+    {
+      "name": "Three rounded lobes and a pointed end",
+      "from": "E",
+      "to": "[M{length:s*0.42}O{r:s*0.37,c:c}][R{deg:-39}M{length:s*0.42}O{r:s*0.27,c:c}][R{deg:39}M{length:s*0.42}O{r:s*0.27,c:c}][C{color:c}M{length:s*0.56}(R{deg:-17}F{length:s*0.47,width:0.65}R{deg:155}F{length:s*0.43,width:0.65})][C{color:#A1B579}F{length:s*0.66,width:0.65}]"
+    },
+    {
+      "name": "Centred dot",
+      "from": "O",
+      "to": "[H{rot:0}M{length:-r}C{color:c}L{size:r}]"
+    },
+    {
+      "name": "Tendril unrolls",
+      "from": "Y",
+      "to": "[P{x:x,y:y}H{rot:a}K{n:n,l:3.2,turn:side*10}]",
+      "locals": {
+        "n": "min(31,1+gen()-born)"
+      }
+    },
+    {
+      "name": "A tightening spiral",
+      "from": "K{n:fn v -> v>0}",
+      "to": "C{color:#839B55}F{length:l,width:1.5}R{deg:turn}K{n:n-1,l:l*0.982,turn:turn*1.042}"
+    },
+    {
+      "name": "Pendulous grape bunch",
+      "from": "J",
+      "to": "[P{x:x,y:y}H{rot:260}C{color:#796E49}F{length:7,width:1.3}][P{x:x+(-5)*z,y:y-7-(3)*z}U{r:3.9*z,c:berry}][P{x:x+(2)*z,y:y-7-(2)*z}U{r:3.9*z,c:berry}][P{x:x+(7)*z,y:y-7-(6)*z}U{r:3.9*z,c:berry}][P{x:x+(-8)*z,y:y-7-(9)*z}U{r:3.9*z,c:berry}][P{x:x+(-1)*z,y:y-7-(9)*z}U{r:3.9*z,c:berry}][P{x:x+(4)*z,y:y-7-(12)*z}U{r:3.9*z,c:berry}][P{x:x+(-5)*z,y:y-7-(15)*z}U{r:3.9*z,c:berry}][P{x:x+(1)*z,y:y-7-(17)*z}U{r:3.9*z,c:berry}][P{x:x+(-2)*z,y:y-7-(22)*z}U{r:3.9*z,c:berry}]",
+      "locals": {
+        "age": "gen()-born",
+        "z": "grape_scale*s*min(1,0.16+age/16)",
+        "berry": "#91A756 if age<ripen*0.45 else (#AD8483 if age<ripen else #664168)"
+      }
+    },
+    {
+      "name": "Berry bloom",
+      "from": "U",
+      "to": "O{r:r,c:c}[H{rot:133}M{length:r*0.4}O{r:r*0.22,c:#DACCD6}]"
+    }
+  ]
+}

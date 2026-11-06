@@ -1,0 +1,67 @@
+{
+  "name": "Wisteria Cascade",
+  "recommended_iterations": 14,
+  "description": "A spreading woody wisteria with leafy arches and long hanging lavender flower racemes.",
+  "notes": [
+    "V extends an arch; p hangs vertically regardless of the supporting branch angle.",
+    "The pendants taper in both length and flower size, with a sorted dark-to-light palette.",
+    "Fourteen generations allow the last pendant on the outermost arch to finish."
+  ],
+  "axiom": "S",
+  "symbols": [
+    "S{scale: 1}",
+    "d{r: 1, c: #FFFFFF}",
+    "E{r: 3, c: #4F8B42}",
+    "B{r: 3, c: #B99AD9, center: #E6CFEC}",
+    "V{n: 6, length: 57, h: 60, side: 1, id: 1, u: 1}",
+    "p{n: 6, length: 13, r: 3.7, id: 1, u: 1}"
+  ],
+  "drawing": [
+    {
+      "from": "S",
+      "to": ""
+    },
+    {
+      "from": "d",
+      "to": "[C{color: c}M{length: -r}L{size: r}]"
+    },
+    {
+      "from": "E",
+      "to": "[[M{length: r * 0.7}d{r: r * 0.7, c: c}][M{length: r * 1.5}d{r: r * 0.95, c: c}][M{length: r * 2.3}d{r: r * 0.65, c: c}]C{color: #739653}F{length: r * 2.8, width: max(0.4, r * 0.13)}]"
+    },
+    {
+      "from": "B",
+      "to": "[[R{deg: 0.0}M{length: r * 1.25}d{r: r, c: c}][R{deg: 72.0}M{length: r * 1.25}d{r: r, c: c}][R{deg: 144.0}M{length: r * 1.25}d{r: r, c: c}][R{deg: 216.0}M{length: r * 1.25}d{r: r, c: c}][R{deg: 288.0}M{length: r * 1.25}d{r: r, c: c}]d{r: r * 0.46, c: center}]"
+    },
+    {
+      "from": "V",
+      "to": "E{r: 5 * u}"
+    },
+    {
+      "from": "p",
+      "to": "B{r: r, c: #C6AFE1}"
+    }
+  ],
+  "rules": [
+    {
+      "from": "S",
+      "to": "M{length: 25 * scale}C{color: #6D584C}R{deg: -5}F{length: 100 * scale, width: 17 * scale}R{deg: 10}F{length: 115 * scale, width: 13 * scale}R{deg: -5}[R{deg: -55}V{h: -55, side: -1, length: 57 * scale, id: 2, u: scale}][R{deg: 55}V{h: 55, side: 1, length: 57 * scale, id: 3, u: scale}]"
+    },
+    {
+      "from": "V{n: fn v -> v > 0}",
+      "to": "C{color: #776154}F{length: length, width: (1.5 + n * 0.85) * u}[M{length: -length * 0.55}R{deg: -side * 70}E{r: 6.2 * u, c: #739C4A}][M{length: -length * 0.45}R{deg: 180 - h}p{n: 5, length: 11 * u, r: 3.3 * u, id: id + 1, u: u}][R{deg: -50}E{r: 6 * u, c: #5F8A43}][R{deg: 45}E{r: 5.8 * u, c: #7CA653}][R{deg: 180 - h}p{n: 6, length: (11 + id % 3) * u, r: 3.8 * u, id: id, u: u}]R{deg: side * 6}V{n: n - 1, length: length * 0.94, h: h + side * 6, side: side, id: id + 2, u: u}"
+    },
+    {
+      "from": "V{n: 0}",
+      "to": "[R{deg: 180 - h}p{n: 5, length: 11 * u, r: 3.2 * u, id: id, u: u}]"
+    },
+    {
+      "from": "p{n: fn v -> v > 0}",
+      "to": "C{color: #8C9B64}F{length: length, width: 0.65 * u}[R{deg: -65}M{length: r * 1.8}B{r: r, c: [#8760AC, #A17CC3, #B99AD9, #D2BFE9].sort_by(fn c -> c)[min(3, (6 - n) // 2)]}][R{deg: 65}M{length: r * 1.8}B{r: r * 0.9, c: #B99AD9}]p{n: n - 1, length: length * 0.96, r: r * 0.88, id: id, u: u}"
+    },
+    {
+      "from": "p{n: 0}",
+      "to": "B{r: max(1.1 * u, r), c: #E0D3EF}"
+    }
+  ]
+}

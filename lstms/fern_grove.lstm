@@ -1,0 +1,57 @@
+{
+  "name": "Fern Grove",
+  "recommended_iterations": 17,
+  "description": "Five long curling fern fronds with paired, progressively tapering compound leaflets.",
+  "notes": [
+    "T makes a gently bending frond; Q grows each narrow leaflet in four tapering segments.",
+    "The leaflet span follows a sampled profile, largest near the middle of the frond.",
+    "No flowers: this model emphasizes nested botanical structure and fine foliage."
+  ],
+  "axiom": "S",
+  "symbols": [
+    "S{scale: 1}",
+    "d{r: 1, c: #FFFFFF}",
+    "T{n: 12, length: 25, side: 1, id: 0, u: 1}",
+    "Q{n: 3, length: 11, w: 4, side: 1, u: 1}"
+  ],
+  "drawing": [
+    {
+      "from": "S",
+      "to": ""
+    },
+    {
+      "from": "d",
+      "to": "[C{color: c}M{length: -r}L{size: r}]"
+    },
+    {
+      "from": "T",
+      "to": "d{r: 2 * u, c: #6D9B52}"
+    },
+    {
+      "from": "Q",
+      "to": "C{color: #4C8A51}F{length: length, width: w}"
+    }
+  ],
+  "rules": [
+    {
+      "from": "S",
+      "to": "M{length: 25 * scale}[R{deg: -35}T{n: 12, length: 22 * scale, side: -1, id: 0, u: scale}][R{deg: -18}T{n: 12, length: 27 * scale, side: -1, id: 1, u: scale}][R{deg: 0}T{n: 12, length: 30 * scale, side: 1, id: 2, u: scale}][R{deg: 18}T{n: 12, length: 26 * scale, side: 1, id: 3, u: scale}][R{deg: 35}T{n: 12, length: 21 * scale, side: 1, id: 4, u: scale}]"
+    },
+    {
+      "from": "T{n: fn v -> v > 0}",
+      "to": "C{color: #5D8450}F{length: length, width: (0.7 + n * 0.18) * u}[R{deg: -62}Q{length: let profile = [0.5, 0.7, 0.9, 1, 1, 0.95, 0.85, 0.72, 0.6, 0.48, 0.34, 0.2] for 16 * u * profile[12 - n], w: (3 + n * 0.3) * u, side: -1, u: u}][R{deg: 62}Q{length: let profile = [0.5, 0.7, 0.9, 1, 1, 0.95, 0.85, 0.72, 0.6, 0.48, 0.34, 0.2] for 16 * u * profile[12 - n], w: (3 + n * 0.3) * u, side: 1, u: u}]R{deg: side * 3}T{n: n - 1, length: length * 0.96, side: side, id: id, u: u}"
+    },
+    {
+      "from": "T{n: 0}",
+      "to": "d{r: 1.1 * u, c: #91B26B}"
+    },
+    {
+      "from": "Q{n: fn v -> v > 0}",
+      "to": "C{color: #3C7950}F{length: length, width: max(0.5 * u, w)}[R{deg: -55}M{length: length * 0.2}d{r: max(0.9 * u, w * 0.65), c: #48864D}][R{deg: 55}M{length: length * 0.2}d{r: max(0.9 * u, w * 0.65), c: #5A9655}][R{deg: -55}F{length: length * 0.35, width: max(0.4 * u, w * 0.6)}][R{deg: 55}F{length: length * 0.35, width: max(0.4 * u, w * 0.6)}]R{deg: -side * 8}Q{n: n - 1, length: length * 0.72, w: w * 0.65, side: side, u: u}"
+    },
+    {
+      "from": "Q{n: 0}",
+      "to": "C{color: #639B5C}F{length: length * 0.8, width: 0.5 * u}"
+    }
+  ]
+}

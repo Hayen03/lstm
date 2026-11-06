@@ -1,0 +1,273 @@
+// Thé des bois  |  a wintergreen colony seen from overhead
+// Try -n 76, or --animate -n 76 -f 8. Distances are in canvas units.
+{
+  "name": "Thé des bois",
+  "description": "Wintergreen seen from above. Rhizomes find open ground under the litter. Terminal leaf clusters unfurl, and some older shoots carry one or two berries.",
+  "width": 960,
+  "height": 720,
+  "bg": "#373528",
+  "seed": "sous-bois",
+  "recommended_iterations": 76,
+  "globals": {
+    // Keep crowns farther apart with spacing, or enlarge the leaves with leaf_scale.
+    // fruit_chance is the probability that a new crown will eventually bear fruit.
+    "spacing": "63",
+    "stride": "88",
+    "leaf_scale": "1",
+    "fruit_chance": "0.34",
+    "ease": "fn v -> let t=v.clamp(0,1) for t*t*(3-2*t)",
+    "sine": "fn deg -> let u=(deg%360)/180, v=(u if u<=1 else u-1), p=v*(1-v) for (1 if u<=1 else -1)*16*p/(5-4*p)",
+    "cosine": "fn deg -> sine(deg+90)",
+    "room": "fn x,y -> abs(x)<screen()[0]/2+4 && abs(y)<screen()[1]/2+4 && !marked().any(fn m -> (m[0]-x)*(m[0]-x)+(m[1]-y)*(m[1]-y)<spacing*spacing)",
+    "noise": "fn n -> let t=(int(n)*137+1879)%4093 for (((t*t+71)*t+139*t+47)%4093)/4093",
+    "foliage": "[[#285230,#467543,#649050,#86A469,#6B8F58],[#386733,#5D8842,#83A956,#A8B974,#729751],[#27553C,#407650,#61976C,#95B388,#60936F],[#507436,#7C9F46,#A9C568,#B5C787,#8BA75C],[#365C30,#58783B,#829A4F,#A3B370,#708952]]",
+    "young": "[#75883E,#95AF50,#BBCE6D,#CAD68F,#9AB86C]",
+    "project": "fn points,x,y,u,v,w,z,bend -> points.map(fn p -> let t=p[0], k=p[1]+bend*t*t for [x+t*u+k*w,y+t*v+k*z])",
+    // Blade coordinates are [along, across], measured in units of leaf length.
+    "blade": "[[0,0],[0.09,0.078],[0.22,0.158],[0.36,0.22],[0.51,0.265],[0.65,0.28],[0.703,0.271],[0.721,0.279],[0.76,0.25],[0.81,0.236],[0.837,0.227],[0.832,0.217],[0.885,0.185],[0.94,0.125],[0.973,0.065],[1.012,0.018],[0.967,-0.046],[0.939,-0.103],[0.878,-0.157],[0.857,-0.185],[0.849,-0.175],[0.78,-0.22],[0.756,-0.246],[0.742,-0.234],[0.65,-0.254],[0.534,-0.249],[0.397,-0.218],[0.25,-0.159],[0.1,-0.068]]",
+    "sunface": "[[0,0],[0.09,0.078],[0.22,0.158],[0.36,0.22],[0.51,0.265],[0.65,0.28],[0.703,0.271],[0.721,0.279],[0.76,0.25],[0.81,0.236],[0.837,0.227],[0.832,0.217],[0.885,0.185],[0.94,0.125],[0.973,0.065],[1.012,0.018],[0.86,0.015],[0.61,-0.002],[0.32,-0.015],[0.1,-0.009]]",
+    "wax": "[[0.3,0.153],[0.418,0.204],[0.56,0.24],[0.67,0.25],[0.772,0.221],[0.689,0.231],[0.558,0.222],[0.427,0.185]]",
+    "rib": "[[0.018,0],[0.29,0.014],[0.59,0.019],[0.84,0.023],[0.986,0.02],[0.78,0.011],[0.5,-0.003],[0.18,-0.015]]",
+    "vone": "[[0.22,0.001],[0.32,0.071],[0.417,0.132],[0.494,0.151]]",
+    "vtwo": "[[0.49,0.007],[0.597,0.109],[0.68,0.158],[0.749,0.171]]",
+    "vthree": "[[0.32,0],[0.415,-0.068],[0.52,-0.123],[0.61,-0.144]]",
+    "vfour": "[[0.59,0.009],[0.69,-0.063],[0.784,-0.099],[0.843,-0.111]]"
+  },
+  "axiom": "ZS{x:-255,y:-104,a:20}S{x:221,y:91,a:145}S{x:-127,y:220,a:195}",
+  // S is a founder, T a searching rhizome tip, A a site waiting to sprout, Q a crown.
+  // Z draws the stationary forest floor below the three founders.
+  "symbols": [
+    "Z",
+    "S{x:0,y:0,a:0}",
+    "T{x:0,y:0,a:0,n:5,side:1}",
+    "A{x:0,y:0,a:0,n:0,side:1,born:0,wait:4}",
+    "Q{x:0,y:0,a:0,k:1,q:1,n:4,fruit:0,born:0}",
+    "u{x:0,y:0,a:0,k:1,q:0,n:4,j:0,age:0}",
+    "b{x:0,y:0,a:0,s:35,w:1,q:0,pal:foliage[0]}",
+    "j{x:0,y:0,a:0,r:6,reach:12,stage:1}",
+    "o{r:1,c:#FFFFFF}",
+    "z{i:0,n:1}",
+    "e{i:0}",
+    "m{i:0,s:1}",
+    "g{s:1,c:#788147}",
+    "f{s:1,c:#785842}",
+    "t{s:1,c:#5B5940}",
+    "k{x:0,y:0,r:1,c:#547A45}",
+    "h{p:[],i:1}",
+    "v{p:[],w:1}",
+    "i{p:[]}"
+  ],
+  "rules": [
+    {
+      "name": "Three buried growing tips from a rooted shoot",
+      "from": "S",
+      "locals": {
+        "h": "a+random()*28-14"
+      },
+      "to": "Q{x:x,y:y,a:random()*360,k:0.73+random()*0.63,q:int(random()*3600),n:3+int(random()*2.65),fruit:(1+int(random()*1.65) if random()<fruit_chance else 0),born:gen()}T{x:x,y:y,a:h,n:8}T{x:x,y:y,a:h+112+random()*20,n:7,side:-1}T{x:x,y:y,a:h-112-random()*22,n:8}"
+    },
+    {
+      "name": "Record the crown for next generation’s spacing test",
+      "from": "Q",
+      "locals": {
+        "occupied": "mark([x,y])"
+      },
+      "to": "Q{x:x,y:y,a:a,k:k,q:q,n:n,fruit:fruit,born:born}"
+    },
+    {
+      "name": "Probe straight ahead, then to either side",
+      "from": "T",
+      "locals": {
+        "step": "stride*(0.91+random()*0.35)",
+        "ahead": "a+random()*46-23",
+        "turn": "side*(43+random()*28)",
+        "choices": "[ahead,ahead+turn,ahead-turn,ahead+1.7*turn,ahead-1.7*turn].filter(fn d -> room(x+step*cosine(d),y+step*sine(d)))",
+        "chosen": "choices[0] if len(choices)>0 else 999"
+      },
+      "to": "A{x:x+step*cosine(chosen),y:y+step*sine(chosen),a:chosen,n:(n if chosen!=999 else -1),side:side,born:gen(),wait:3+int(random()*4)}"
+    },
+    {
+      "name": "A crowded tip goes dormant",
+      "from": "A",
+      "cond": "n<0",
+      "to": ""
+    },
+    {
+      "name": "Send up a shoot and divide the rhizome",
+      "from": "A",
+      "cond": "n>=0 && gen()-born>=wait && (n==6 || n==4)",
+      "to": "Q{x:x,y:y,a:random()*360,k:0.73+random()*0.63,q:int(random()*3600),n:3+int(random()*2.65),fruit:(1+int(random()*1.65) if random()<fruit_chance else 0),born:gen()}T{x:x,y:y,a:a,n:n-1,side:-side}T{x:x,y:y,a:a+side*(62+random()*30),n:3,side:side}"
+    },
+    {
+      "name": "Send up a shoot and keep creeping",
+      "from": "A",
+      "cond": "n>0 && n!=6 && n!=4 && gen()-born>=wait",
+      "to": "Q{x:x,y:y,a:random()*360,k:0.73+random()*0.63,q:int(random()*3600),n:3+int(random()*2.65),fruit:(1+int(random()*1.65) if random()<fruit_chance else 0),born:gen()}T{x:x,y:y,a:a,n:n-1,side:side}"
+    },
+    {
+      "name": "Last shoot on a side runner",
+      "from": "A",
+      "cond": "n==0 && gen()-born>=wait",
+      "to": "Q{x:x,y:y,a:random()*360,k:0.73+random()*0.63,q:int(random()*3600),n:3+int(random()*2.65),fruit:(1+int(random()*1.65) if random()<fruit_chance else 0),born:gen()}"
+    }
+  ],
+  "drawing": [
+    {
+      "name": "Three small overwintered buds",
+      "from": "S",
+      "to": "[P{x:x,y:y}H{rot:a}C{color:#A1865E}L{size:3.1}R{deg:123}C{color:#92945E}L{size:2.5}]"
+    },
+    {
+      "name": "Leaf crown and its fruit stalks",
+      "from": "Q",
+      "locals": {
+        "age": "gen()-born",
+        "ba": "a+178/n+14*noise(q+8)",
+        "stage": "(age-19-9*noise(q+7))/15",
+        "reach": "k*(16+noise(q)*8)*ease(stage*2)",
+        "br": "(8+2*noise(q+3))*k*ease(stage*1.6) if fruit>0 else 0",
+        "r2": "br*0.78*ease(stage*1.35-0.15) if fruit==2 else 0"
+      },
+      "to": "u{x:x,y:y,a:a,k:k,q:q,n:n,age:age}[P{x:x,y:y}o{r:k*(0.65+1.45*ease(age/9)),c:#87544A}]j{x:x,y:y,a:ba,r:br,reach:reach,stage:stage}j{x:x,y:y,a:ba+36,r:r2,reach:reach*1.3,stage:stage-0.12}"
+    },
+    {
+      "name": "Successive leaves open at different angles",
+      "from": "u",
+      "cond": "j<n",
+      "locals": {
+        "id": "q+39*j",
+        "delay": "j*(1.4+noise(q+12))",
+        "opening": "ease((age-delay+2)/12)",
+        "angle": "a+j*360/n+(noise(id+5)-0.5)*46+(1-opening)*(13-9*j)",
+        "length": "leaf_scale*k*(37+24*noise(id+2))*(0.91 if j==n-1 else 1.12)*(0.035+0.965*opening) if age+1>=delay else 0",
+        "broad": "0.85+0.51*noise(id+4)",
+        "bx": "x+cosine(angle+30)*j*k*0.9",
+        "by": "y+sine(angle+30)*j*k*0.9",
+        "colors": "young if age-delay<6 else foliage[int(noise(id+1)*5)]"
+      },
+      "to": "b{x:bx,y:by,a:angle,s:length,w:broad,q:id,pal:colors}u{x:x,y:y,a:a,k:k,q:q,n:n,j:j+1,age:age}"
+    },
+    {
+      "name": "Tapered petiole, toothed blade, wax and venation",
+      "from": "b",
+      "cond": "s>0.3",
+      "locals": {
+        "side": "1 if sine(131-a)>=0 else -1",
+        "ex": "s*cosine(a)",
+        "ey": "s*sine(a)",
+        "nx": "-ey*w*side",
+        "ny": "ex*w*side",
+        "bx": "x+ex*0.115",
+        "by": "y+ey*0.115",
+        "bend": "(noise(q+9)-0.5)*0.24",
+        "dt": "0.45+0.3*noise(q+66)"
+      },
+      "to": "[P{x:x,y:y}C{color:#8D6050}D{x:bx,y:by,width:max(0.45,s*0.038)}C{color:#2F3526}i{p:project(blade,bx+s*0.036,by-s*0.053,ex,ey,nx,ny,bend)}C{color:pal[0]}i{p:project(blade,bx,by,ex,ey,nx,ny,bend)}C{color:pal[1]}i{p:project(sunface,bx,by,ex,ey,nx,ny,bend)}C{color:pal[2]}i{p:project(wax,bx,by,ex,ey,nx,ny,bend)}C{color:pal[3]}i{p:project(rib,bx,by,ex,ey,nx,ny,bend)}C{color:pal[4]}v{p:project(vone,bx,by,ex,ey,nx,ny,bend),w:max(0.38,s*0.009)}v{p:project(vtwo,bx,by,ex,ey,nx,ny,bend),w:max(0.38,s*0.009)}v{p:project(vthree,bx,by,ex,ey,nx,ny,bend),w:max(0.38,s*0.009)}v{p:project(vfour,bx,by,ex,ey,nx,ny,bend),w:max(0.38,s*0.009)}k{x:bx+ex*dt+nx*0.10,y:by+ey*dt+ny*0.10,r:(s*(0.024+0.016*noise(q+90)) if noise(q+67)>0.83 else 0),c:pal[1]}]"
+    },
+    {
+      "name": "A round berry with a dimpled calyx and reflected light",
+      "from": "j",
+      "cond": "r>0.22 && stage>0",
+      "locals": {
+        "shade": "#8B9450 if stage<0.38 else (#99554E if stage<0.67 else #762634)",
+        "skin": "#A4AD68 if stage<0.38 else (#BA7669 if stage<0.67 else #CB3B45)",
+        "shine": "#C4C694 if stage<0.38 else (#DCA292 if stage<0.67 else #F27978)",
+        "eye": "#695948 if stage<0.67 else #512B32"
+      },
+      "to": "[P{x:x,y:y}H{rot:a}C{color:#98605B}F{length:reach,width:max(0.6,r*0.23)}o{r:r,c:shade}[H{rot:128}M{length:r*0.13}o{r:r*0.86,c:skin}][H{rot:131}M{length:r*0.53}o{r:r*0.24,c:shine}][H{rot:125}M{length:r*0.62}o{r:r*0.085,c:#E9D7B5}][H{rot:313}M{length:r*0.53}o{r:r*0.18,c:eye}H{rot:8}C{color:eye}F{length:r*0.22,width:r*0.11}]]"
+    },
+    {
+      "name": "Centred disc",
+      "from": "o",
+      "to": "[H{rot:0}M{length:-r}C{color:c}L{size:r}]"
+    },
+    {
+      "name": "Forest floor under every shoot",
+      "from": "Z",
+      "to": "z{i:0,n:256}"
+    },
+    {
+      "name": "Bisect the scatter pass",
+      "from": "z",
+      "cond": "n>1",
+      "to": "z{i:i,n:n//2}z{i:i+n//2,n:n//2}"
+    },
+    {
+      "name": "One patch of litter",
+      "from": "z",
+      "cond": "n==1",
+      "to": "e{i:i}"
+    },
+    {
+      "name": "Duff, needles and moss islands",
+      "from": "e",
+      "locals": {
+        "x": "(noise(i+451)-0.5)*(screen()[0]+66)",
+        "y": "(noise(i+1636)-0.5)*(screen()[1]+66)",
+        "a": "noise(i+287)*360",
+        "s": "8+27*noise(i+76)",
+        "sl": "7+noise(i+83)*28",
+        "earth": "[#3F3C2C,#3A3327,#42432F,#38392B][i%4]",
+        "needle": "[#5A5139,#706048,#62513B,#554D36][i%4]",
+        "l": "(14+noise(i+98)*26) if i%10==3 else 0",
+        "litter": "[#796345,#865744,#786E48][int(noise(i+9)*3)]",
+        "ms": "(0.64+0.65*noise(i+29)) if i%3!=0 else 0"
+      },
+      "to": "[P{x:x,y:y}H{rot:a}t{s:s,c:earth}][P{x:x+12,y:y-7}H{rot:a+17}C{color:needle}F{length:sl,width:0.9}R{deg:6}F{length:sl*0.73,width:0.55}][P{x:x-13,y:y+18}H{rot:a-25}C{color:needle}F{length:sl*0.94,width:0.75}][P{x:x+20,y:y+5}H{rot:a+117}f{s:l,c:litter}][P{x:x-10,y:y-9}m{i:i,s:ms}]"
+    },
+    {
+      "name": "Broken earth tones",
+      "from": "t",
+      "to": "[C{color:c}(R{deg:-46.55}M{length:s*0.262}R{deg:39.64}M{length:s*0.332}R{deg:31.36}M{length:s*0.242}R{deg:-17.49}M{length:s*0.413}R{deg:126.31}M{length:s*0.233}R{deg:31.36}M{length:s*0.415}R{deg:-327.92}M{length:s*0.313})]"
+    },
+    {
+      "name": "A fallen russet leaf",
+      "from": "f",
+      "cond": "s>0",
+      "to": "[C{color:c}(R{deg:-23.20}M{length:s*0.228}R{deg:-28.14}M{length:s*0.192}R{deg:47.40}M{length:s*0.291}R{deg:26.33}M{length:s*0.184}R{deg:14.92}M{length:s*0.264}R{deg:109.58}M{length:s*0.275}R{deg:-9.40}M{length:s*0.163}R{deg:-301.54}M{length:s*0.218}R{deg:-4.64}M{length:s*0.255})][C{color:#9C805A}F{length:s*0.38,width:0.7}R{deg:-5}F{length:s*0.47,width:0.55}]"
+    },
+    {
+      "name": "A mat of little moss fronds",
+      "from": "m",
+      "cond": "s>0",
+      "locals": {
+        "a": "noise(i+571)*360",
+        "c": "[#6A7344,#78824B,#697348,#858852,#737D48][int(noise(i+11)*5)]"
+      },
+      "to": "[H{rot:a+0}M{length:s*1}H{rot:a+1}g{s:s*1,c:c}][H{rot:a+76}M{length:s*9}H{rot:a+64}g{s:s*0.74,c:c}][H{rot:a+155}M{length:s*7}H{rot:a+139}g{s:s*1.1,c:c}][H{rot:a+244}M{length:s*6}H{rot:a+253}g{s:s*0.77,c:c}][H{rot:a+316}M{length:s*10}H{rot:a+311}g{s:s*0.82,c:c}]"
+    },
+    {
+      "name": "Feather moss",
+      "from": "g",
+      "to": "[C{color:c}F{length:s*1.6,width:s*0.8}[R{deg:55}F{length:s*3.2,width:s*0.82}][R{deg:-47}F{length:s*2.7520000000000002,width:s*0.82}]R{deg:4}F{length:s*2.4,width:s*0.8}[R{deg:50}F{length:s*4.1,width:s*0.82}][R{deg:-43}F{length:s*3.526,width:s*0.82}]R{deg:9}F{length:s*2.5,width:s*0.8}[R{deg:45}F{length:s*3.8,width:s*0.82}][R{deg:-39}F{length:s*3.268,width:s*0.82}]R{deg:4}F{length:s*2.2,width:s*0.8}[R{deg:40}F{length:s*2.9,width:s*0.82}][R{deg:-35}F{length:s*2.4939999999999998,width:s*0.82}]R{deg:9}F{length:s*2,width:s*0.8}[R{deg:35}F{length:s*1.9,width:s*0.82}][R{deg:-31}F{length:s*1.634,width:s*0.82}]R{deg:4}F{length:s*2.6,width:s*0.7}]"
+    },
+    {
+      "name": "Occasional bead of rain",
+      "from": "k",
+      "cond": "r>0.65",
+      "to": "[P{x:x,y:y}o{r:r,c:#3E643D}[H{rot:142}M{length:r*0.13}o{r:r*0.78,c:c}][H{rot:133}M{length:r*0.56}o{r:r*0.30,c:#D9E4BA}]]"
+    },
+    {
+      "name": "Fill a blade-relative contour",
+      "from": "i",
+      "to": "P{x:p[0][0],y:p[0][1]}(h{p:p})"
+    },
+    {
+      "name": "Walk six contour vertices",
+      "from": "h",
+      "cond": "i+5<len(p)",
+      "to": "P{x:p[i][0],y:p[i][1]}P{x:p[i+1][0],y:p[i+1][1]}P{x:p[i+2][0],y:p[i+2][1]}P{x:p[i+3][0],y:p[i+3][1]}P{x:p[i+4][0],y:p[i+4][1]}P{x:p[i+5][0],y:p[i+5][1]}h{p:p,i:i+6}"
+    },
+    {
+      "name": "Complete the contour",
+      "from": "h",
+      "cond": "i<len(p) && i+5>=len(p)",
+      "to": "P{x:p[i][0],y:p[i][1]}h{p:p,i:i+1}"
+    },
+    {
+      "name": "Trace one curved side vein",
+      "from": "v",
+      "to": "P{x:p[0][0],y:p[0][1]}D{x:p[1][0],y:p[1][1],width:w}D{x:p[2][0],y:p[2][1],width:w}D{x:p[3][0],y:p[3][1],width:w}"
+    }
+  ]
+}

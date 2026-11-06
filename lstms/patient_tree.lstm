@@ -1,0 +1,246 @@
+// One persistent tree. 360 frames/year; first flowers in year five.
+// Irregular curved wood, six independently timed leaves per site, no reseeding.
+{
+  "name": "The patient tree \u2014 ancient crown",
+  "description": "One seed, one persistent tree: slow seasonal extension, winter dormancy, delayed flowering, falling fruit and autumn leaves. Animation required.",
+  "seed": "ancient-oak-31",
+  "bg": "#DCE6DC",
+  "recommended_iterations": 7200,
+  "globals": {
+    "year": "360",
+    "dt": "360/year",
+    "ground": "-250",
+    "maturity": "4",
+    "max_depth": "8",
+    "annual_extension": "40",
+    "grow_end": "0.56",
+    "phase": "fn t -> (t%year)/year",
+    "years": "fn t -> t/year",
+    "active": "fn t -> phase(t)<grow_end",
+    "wood_time": "fn t -> (t//year)*grow_end+min(phase(t),grow_end)",
+    "target": "fn d -> 96 if d==0 else 80*0.87.pow(d-1)",
+    "step": "annual_extension/(year*grow_end)",
+    "leaf_color": "fn q -> #59874B if q<0.57 else (#A8A84F if q<0.67 else #C17B3F)",
+    "wave": "fn t -> 1-abs(4*(t%1)-2)",
+    "fruit_chance": "0.42"
+  },
+  "axiom": "ZP{x:0,y:ground}H{rot:90}S",
+  "symbols": [
+    "Z",
+    "O{r:3,c:#FFFFFF}",
+    "S{a:0}",
+    "B{d:0,l:0.1,born:0,done:0,t:96,h:90,k:0}",
+    "V{d:0,last:-1,q:0}",
+    "N{s:15,c:#679D57}",
+    "K{q:0}",
+    "Q{s:3.5}",
+    "U{q:0}",
+    "T{x:0,y:0,v:0.5,vx:0}",
+    "G{x:0,a:0}",
+    "J{x:0,y:0,v:0.7,vx:0,h:0,s:16,a:0}",
+    "W{x:0,s:16,h:0,a:0}",
+    "I{a:0,s:16,q:0,born:0}",
+    "Y{d:0,q:0,p:0}"
+  ],
+  "drawing": [
+    {
+      "from": "Z",
+      "to": "[P{x:-390,y:ground}H{rot:0}C{color:#526D50}F{length:780,width:5}][P{x:-390,y:ground-18}H{rot:0}C{color:#8AB477 if phase(gen())<0.28 else (#D3BD6E if phase(gen())<0.60 else (#BD784D if phase(gen())<0.86 else #829FAB))}F{length:780*phase(gen()),width:3}]"
+    },
+    {
+      "from": "O",
+      "to": "[C{color:c}M{length:-r}L{size:r}]"
+    },
+    {
+      "from": "S",
+      "to": "[H{rot:25}O{r:3,c:#AF8950}]"
+    },
+    {
+      "from": "B",
+      "locals": {
+        "w": "max(0.65,min(64,1+5*max(0,wood_time(gen())-wood_time(born)))*0.78.pow(d))"
+      },
+      "to": "H{rot:h}C{color:#684A36 if d<3 else #806347}R{deg:-k/3}F{length:l/3,width:w}R{deg:-k/3}F{length:l/3,width:w*0.94}R{deg:-k/3}F{length:l/3,width:w*0.88}"
+    },
+    {
+      "from": "V",
+      "to": ""
+    },
+    {
+      "from": "N",
+      "to": "[C{color:c}(F{length:s,width:0.7}R{deg:140}F{length:s*0.652704,width:0.7}R{deg:80}F{length:s*0.652704,width:0.7})]"
+    },
+    {
+      "from": "K",
+      "to": "[H{rot:270}M{length:6}Q{s:3.3}]"
+    },
+    {
+      "from": "Q",
+      "to": "[R{deg:0}M{length:s}O{r:s,c:#F3D6C0}][R{deg:72}M{length:s}O{r:s,c:#F3D6C0}][R{deg:144}M{length:s}O{r:s,c:#F3D6C0}][R{deg:216}M{length:s}O{r:s,c:#F3D6C0}][R{deg:288}M{length:s}O{r:s,c:#F3D6C0}]O{r:s*0.5,c:#DCAA53}"
+    },
+    {
+      "from": "U",
+      "locals": {
+        "r": "2+4.5*min(1,max(0,(phase(gen())-0.28-q*0.07)/0.22))"
+      },
+      "to": "[H{rot:270}M{length:6}O{r:r,c:#91AA51 if phase(gen())<0.46+q*0.08 else #C4A147}]"
+    },
+    {
+      "from": "T",
+      "to": "[P{x:x,y:y}O{r:7,c:#D1AF52}]"
+    },
+    {
+      "from": "G",
+      "locals": {
+        "r": "7 if a<year*0.12 else max(0.4,7*(1-(a/year-0.12)/0.12))",
+        "c": "#D8A14B if a<year*0.035 else (#CD6643 if a<year*0.12 else #77553A)"
+      },
+      "to": "[P{x:x,y:ground+r}O{r:r,c:c}]"
+    },
+    {
+      "from": "J",
+      "to": "[P{x:x,y:y}H{rot:h}N{s:s,c:#C39045}]"
+    },
+    {
+      "from": "W",
+      "to": "[P{x:x,y:ground+1}H{rot:h}N{s:max(0.3,s*(1-a/(year*0.12))),c:#8F713F}]"
+    },
+    {
+      "from": "I",
+      "locals": {
+        "size": "s*min(1,0.08+(gen()-born)/(year*0.09))",
+        "c": "leaf_color(phase(gen())+(q-0.5)*0.13)"
+      },
+      "to": "[R{deg:a}N{s:size,c:c}]"
+    },
+    {
+      "from": "Y",
+      "to": ""
+    }
+  ],
+  "rules": [
+    {
+      "name": "Seed waits",
+      "from": "S",
+      "to": "S{a:a+1}",
+      "cond": "a<year*0.06"
+    },
+    {
+      "name": "Seed becomes sapling",
+      "from": "S",
+      "to": "B{born:gen(),k:(random()-0.5)*9}V{q:random()}",
+      "cond": "a>=year*0.06"
+    },
+    {
+      "name": "Slow warm-season extension",
+      "from": "B",
+      "to": "B{d:d,l:min(t,l+step),born:born,done:done,t:t,h:h,k:k}",
+      "cond": "done==0 && l<t && active(gen())"
+    },
+    {
+      "name": "Unequal fork to left",
+      "from": "B",
+      "to": "B{d:d,l:l,born:born,done:1,t:t,h:h,k:k}[B{d:d+1,born:gen(),t:target(d+1)*(0.72+random()*0.56),h:(heading()+8+random()*23).clamp(9,171),k:(random()-0.5)*24}V{d:d+1,q:random()}][B{d:d+1,born:gen(),t:target(d+1)*(0.72+random()*0.56),h:(heading()-30-random()*29).clamp(9,171),k:(random()-0.5)*24}V{d:d+1,q:random()}]",
+      "cond": "done==0 && l>=t && d<max_depth && active(gen())",
+      "weight": 35
+    },
+    {
+      "name": "Unequal fork to right",
+      "from": "B",
+      "to": "B{d:d,l:l,born:born,done:1,t:t,h:h,k:k}[B{d:d+1,born:gen(),t:target(d+1)*(0.72+random()*0.56),h:(heading()-8-random()*23).clamp(9,171),k:(random()-0.5)*24}V{d:d+1,q:random()}][B{d:d+1,born:gen(),t:target(d+1)*(0.72+random()*0.56),h:(heading()+30+random()*29).clamp(9,171),k:(random()-0.5)*24}V{d:d+1,q:random()}]",
+      "cond": "done==0 && l>=t && d<max_depth && active(gen())",
+      "weight": 35
+    },
+    {
+      "name": "Single crooked continuation",
+      "from": "B",
+      "to": "B{d:d,l:l,born:born,done:1,t:t,h:h,k:k}[B{d:d+1,born:gen(),t:target(d+1)*(0.72+random()*0.56),h:(heading()+(random()-0.5)*36).clamp(9,171),k:(random()-0.5)*24}V{d:d+1,q:random()}]",
+      "cond": "done==0 && l>=t && d<max_depth && active(gen()) && d>0",
+      "weight": 30
+    },
+    {
+      "name": "Spring canopy renewal",
+      "from": "V",
+      "to": "V{d:d,last:gen()//year,q:q}I{a:-125+(random()-0.5)*30,s:12+random()*10,q:random(),born:gen()}I{a:-75+(random()-0.5)*30,s:12+random()*10,q:random(),born:gen()}I{a:-25+(random()-0.5)*30,s:12+random()*10,q:random(),born:gen()}I{a:25+(random()-0.5)*30,s:12+random()*10,q:random(),born:gen()}I{a:75+(random()-0.5)*30,s:12+random()*10,q:random(),born:gen()}I{a:125+(random()-0.5)*30,s:12+random()*10,q:random(),born:gen()}Y{d:d,q:random(),p:random()}",
+      "cond": "last<gen()//year && phase(gen())>=0.045+q*0.07 && phase(gen())<0.52"
+    },
+    {
+      "name": "Juvenile or nonfruiting site",
+      "from": "Y",
+      "to": "",
+      "cond": "years(gen())<maturity || d==0 || p>=fruit_chance || phase(gen())>=0.26"
+    },
+    {
+      "name": "Individual spring blossoms",
+      "from": "Y",
+      "to": "K{q:q}",
+      "cond": "years(gen())>=maturity && d>0 && p<fruit_chance && phase(gen())>=0.14+q*0.07 && phase(gen())<0.26"
+    },
+    {
+      "name": "Flowers set fruit",
+      "from": "K",
+      "to": "U{q:q}",
+      "cond": "phase(gen())>=0.28+q*0.07"
+    },
+    {
+      "name": "Individual fruit drop",
+      "from": "U",
+      "to": "T{x:pos()[0],y:pos()[1]-6,vx:(q-0.5)*1.3}",
+      "cond": "phase(gen())>=0.50+q*0.22"
+    },
+    {
+      "name": "Individual autumn leaf fall",
+      "from": "I",
+      "to": "J{x:pos()[0],y:pos()[1],h:heading()-a,vx:(q-0.5)*1.5,s:s}",
+      "cond": "phase(gen())>=0.64+q*0.20"
+    },
+    {
+      "name": "Fruit falls",
+      "from": "T",
+      "to": "T{x:x+vx*dt,y:max(ground+7,y-v*dt),v:v+0.28*dt,vx:vx}",
+      "cond": "y>ground+7"
+    },
+    {
+      "name": "Fruit lands",
+      "from": "T",
+      "to": "G{x:x}",
+      "cond": "y<=ground+7"
+    },
+    {
+      "name": "Fruit ripens on the ground",
+      "from": "G",
+      "to": "G{x:x,a:a+1}",
+      "cond": "a<year*0.24"
+    },
+    {
+      "name": "Fruit composts without seeds",
+      "from": "G",
+      "to": "",
+      "cond": "a>=year*0.24"
+    },
+    {
+      "name": "Leaf tumbles",
+      "from": "J",
+      "to": "J{x:x+(vx+0.3*wave((gen()+a)*dt/20))*dt,y:max(ground+1,y-v*dt),v:min(5,v+0.08*dt),vx:vx,h:h+7*dt,s:s,a:a+1}",
+      "cond": "y>ground+1"
+    },
+    {
+      "name": "Leaf lands",
+      "from": "J",
+      "to": "W{x:x,s:s,h:h}",
+      "cond": "y<=ground+1"
+    },
+    {
+      "name": "Leaf litter fades",
+      "from": "W",
+      "to": "W{x:x,s:s,h:h,a:a+1}",
+      "cond": "a<year*0.12"
+    },
+    {
+      "name": "Leaf litter disappears",
+      "from": "W",
+      "to": "",
+      "cond": "a>=year*0.12"
+    }
+  ]
+}

@@ -1,0 +1,117 @@
+{
+  name: "Vignes fleuries en volutes",
+  description: "Sept vignes partent du bas de l'ecran, s'enroulent de plus en plus serre, se ramifient et se couvrent de fleurs.",
+  recommended_iterations: 17,
+  bg: "#14182B",
+
+  // S est une graine : elle est remplacee a la generation 1 par sept vignes
+  // dimensionnees selon la taille de la fenetre.
+  axiom: "C{color: #6BCB77}S",
+
+  symbols: [
+    "S",
+    // n: pas restants, ln: longueur du segment, w: epaisseur,
+    // curl: angle d'enroulement (deg, signe = sens), c: couleur de la fleur du bout
+    "A{n: 0, ln: 10, w: 1, curl: 10, c: #FF6F91}",
+    // r: rayon de base, c: petales, d: coeur
+    "Z{r: 3, c: #FFFFFF, d: #FFD93D}",
+  ],
+
+  drawing: [
+    // Les bourgeons restants deviennent des fleurs de bout de vigne.
+    {
+      name: "fleur de bout",
+      from: "A",
+      to: "Z{r: max(5, min(ln*1.1, 20)), c: c, d: #FFD93D}",
+    },
+    // Fleur : six petales (disques) autour d'un coeur centre sur la tortue.
+    {
+      name: "fleur",
+      from: "Z",
+      to: "[C{color: c}\
+[M{length: r*0.4}L{size: r*0.5}]\
+[R{deg: 60}M{length: r*0.4}L{size: r*0.5}]\
+[R{deg: 120}M{length: r*0.4}L{size: r*0.5}]\
+[R{deg: 180}M{length: r*0.4}L{size: r*0.5}]\
+[R{deg: 240}M{length: r*0.4}L{size: r*0.5}]\
+[R{deg: 300}M{length: r*0.4}L{size: r*0.5}]\
+[C{color: d}M{length: -r*0.45}L{size: r*0.45}]]",
+    },
+  ],
+
+  rules: [
+    // Sept vignes en eventail ; W et H sont la largeur et la hauteur de la fenetre.
+    {
+      name: "graine",
+      from: "S",
+      locals: {
+        W: "(screen() ?? [900, 700])[0]",
+        H: "(screen() ?? [900, 700])[1]",
+      },
+      to: "[R{deg: -82}A{n: 16, ln: W*0.06, w: 3, curl: 5, c: #FF6F91}]\
+[R{deg: 82}A{n: 16, ln: W*0.06, w: 3, curl: -5, c: #B39CD0}]\
+[R{deg: -50}A{n: 16, ln: H*0.1, w: 3, curl: -4, c: #FF9671}]\
+[R{deg: 50}A{n: 16, ln: H*0.1, w: 3, curl: 4, c: #7BB8FF}]\
+[R{deg: -18}A{n: 16, ln: H*0.11, w: 3, curl: 6, c: #D65DB1}]\
+[R{deg: 18}A{n: 16, ln: H*0.11, w: 3, curl: -6, c: #FF8066}]\
+A{n: 16, ln: H*0.12, w: 3, curl: 3, c: #FFFFFF}",
+    },
+
+    // Avancer, courber un peu plus, avec une feuille a l'interieur de la courbe.
+    {
+      name: "volute",
+      from: "A",
+      cond: "n > 0",
+      weight: 3,
+      locals: {
+        s: "curl.sign()",
+        ln2: "ln*(0.88 + random()*0.04)",
+        w2: "max(1, w*0.93)",
+        curl2: "curl*(1.07 + random()*0.06)",
+      },
+      to: "F{length: ln, width: w}\
+[R{deg: s*60}C{color: #3FA34D}L{size: max(1.5, ln*0.2)}]\
+R{deg: curl}\
+A{n: n-1, ln: ln2, w: w2, curl: curl2, c: c}",
+    },
+
+    // Avancer et faire pousser une fleur sur une tige, cote exterieur de la courbe.
+    {
+      name: "volute fleurie",
+      from: "A",
+      cond: "n > 1",
+      weight: 2,
+      locals: {
+        s: "curl.sign()",
+        pc: "[#FF6F91, #FF9671, #D65DB1, #FFFFFF, #B39CD0, #FF8066, #7BB8FF].choice()",
+        ln2: "ln*(0.88 + random()*0.04)",
+        w2: "max(1, w*0.93)",
+        curl2: "curl*(1.07 + random()*0.06)",
+      },
+      to: "F{length: ln, width: w}\
+[R{deg: -s*65}F{length: ln*0.5, width: 1}Z{r: max(2, ln*0.3), c: pc, d: #FFD93D}]\
+[R{deg: s*60}C{color: #3FA34D}L{size: max(1.5, ln*0.2)}]\
+R{deg: curl}\
+A{n: n-1, ln: ln2, w: w2, curl: curl2, c: c}",
+    },
+
+    // Ramification : une vigne plus courte part vers l'exterieur en s'enroulant en sens inverse.
+    {
+      name: "ramification",
+      from: "A",
+      cond: "n > 3",
+      weight: 2,
+      locals: {
+        s: "curl.sign()",
+        pc: "[#FF6F91, #FF9671, #D65DB1, #FFFFFF, #B39CD0, #FF8066, #7BB8FF].choice()",
+        ln2: "ln*(0.88 + random()*0.04)",
+        w2: "max(1, w*0.93)",
+        curl2: "curl*(1.07 + random()*0.06)",
+      },
+      to: "F{length: ln, width: w}\
+[R{deg: -s*50}A{n: n-3, ln: ln*0.78, w: max(1, w*0.8), curl: -curl*0.6, c: pc}]\
+R{deg: curl}\
+A{n: n-1, ln: ln2, w: w2, curl: curl2, c: c}",
+    },
+  ],
+}

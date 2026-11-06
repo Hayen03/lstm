@@ -1,0 +1,71 @@
+// Ember Heighway dragon
+// python test.py ember_dragon.lstm -n 13 --animate
+{
+  "name": "Ember Heighway dragon",
+  "description": "Heighway dragon: X -> XlYGl, Y -> rGXrY. X and Y draw nothing. New segments acquire warmer/cooler tones by recursion depth; the original right-angle construction is unchanged.",
+  "recommended_iterations": 13,
+  "bg": "background",
+  "globals": {
+    "scale": 1,
+    "background": 1645868,
+    "angle": 90,
+    "step": 5,
+    "stroke": 1.8,
+    "palette": [
+      16107385,
+      15700575,
+      15230297,
+      13192819,
+      9988512
+    ]
+  },
+  "axiom": "S",
+  "symbols": [
+    "S",
+    "l",
+    "r",
+    "G{t: 0}",
+    "X{t: 0}",
+    "Y{t: 0}"
+  ],
+  "drawing": [
+    {
+      "from": "S",
+      "to": ""
+    },
+    {
+      "from": "l",
+      "to": "R{deg: -angle}"
+    },
+    {
+      "from": "r",
+      "to": "R{deg: angle}"
+    },
+    {
+      "from": "G",
+      "to": "C{color: palette[t%len(palette)]}F{length: step*scale,width: stroke*scale}"
+    },
+    {
+      "from": "X",
+      "to": ""
+    },
+    {
+      "from": "Y",
+      "to": ""
+    }
+  ],
+  "rules": [
+    {
+      "from": "S",
+      "to": "M{length: 260*scale}R{deg: 90}M{length: 130*scale}G X"
+    },
+    {
+      "from": "X",
+      "to": "X{t: t+1}lY{t: t+1}G{t: t+1}l"
+    },
+    {
+      "from": "Y",
+      "to": "rG{t: t+2}X{t: t+1}rY{t: t+1}"
+    }
+  ]
+}

@@ -1,0 +1,357 @@
+// Viola | Run with --animate -n 72 -f 9.
+{
+  "name": "Pansy thicket",
+  "description": "A bed of seedlings branches, puts out scalloped leaves and raises nodding buds. Two upper petals unfold first, then the side petals and the golden lip.",
+  "width": 1000,
+  "height": 680,
+  "bg": "#364C32",
+  "seed": "velours",
+  "recommended_iterations": 72,
+  "globals": {
+    // Size multipliers and opening time in generations.
+    "bloom_scale": "1",
+    "leaf_scale": "1",
+    "opening_time": "11",
+    "ease": "fn v -> let t=v.clamp(0,1) for t*t*(3-2*t)",
+    "sine": "fn deg -> let u=(deg%360)/180, v=(u if u<=1 else u-1), p=v*(1-v) for (1 if u<=1 else -1)*16*p/(5-4*p)",
+    "cosine": "fn deg -> sine(deg+90)",
+    "noise": "fn n -> let t=(int(n)*137+1879)%4093 for (((t*t+71)*t+139*t+47)%4093)/4093",
+    "leaf": "[[0,0],[0.12,0.063],[0.19,0.12],[0.25,0.18],[0.27,0.167],[0.33,0.236],[0.38,0.253],[0.4,0.232],[0.48,0.29],[0.53,0.29],[0.55,0.266],[0.62,0.288],[0.66,0.27],[0.68,0.242],[0.76,0.237],[0.81,0.2],[0.82,0.18],[0.9,0.138],[1,0.013],[0.96,-0.053],[0.87,-0.144],[0.85,-0.172],[0.8,-0.174],[0.75,-0.228],[0.7,-0.215],[0.63,-0.261],[0.59,-0.247],[0.52,-0.272],[0.47,-0.251],[0.42,-0.253],[0.34,-0.207],[0.29,-0.213],[0.23,-0.15],[0.18,-0.14],[0.11,-0.065]]",
+    "leaf_lit": "[[0,0],[0.12,0.063],[0.19,0.12],[0.25,0.18],[0.27,0.167],[0.33,0.236],[0.38,0.253],[0.4,0.232],[0.48,0.29],[0.53,0.29],[0.55,0.266],[0.62,0.288],[0.66,0.27],[0.68,0.242],[0.76,0.237],[0.81,0.2],[0.82,0.18],[0.9,0.138],[1,0.013],[0.62,0.03],[0.32,0.018]]",
+    // Normalized coordinates run from the throat toward the petal tip.
+    "petal": "[[0,0],[0.065,0.058],[0.13,0.145],[0.24,0.259],[0.37,0.397],[0.52,0.492],[0.64,0.522],[0.74,0.521],[0.84,0.485],[0.914,0.43],[0.972,0.345],[1.014,0.237],[1.027,0.139],[1.02,0.057],[1.01,0.004],[1.023,-0.082],[1.007,-0.184],[0.979,-0.281],[0.927,-0.372],[0.855,-0.445],[0.77,-0.496],[0.68,-0.516],[0.575,-0.501],[0.456,-0.447],[0.33,-0.346],[0.21,-0.225],[0.12,-0.122],[0.052,-0.059]]",
+    "veil": "[[0,0],[0.18,0.17],[0.33,0.299],[0.49,0.37],[0.58,0.34],[0.66,0.332],[0.69,0.3],[0.75,0.288],[0.76,0.233],[0.82,0.206],[0.81,0.143],[0.855,0.103],[0.831,0.039],[0.86,-0.03],[0.817,-0.095],[0.83,-0.157],[0.77,-0.183],[0.76,-0.25],[0.69,-0.259],[0.65,-0.31],[0.55,-0.315],[0.5,-0.344],[0.4,-0.31],[0.29,-0.243],[0.17,-0.16]]",
+    "sun": "[[0,0],[0.13,0.16],[0.27,0.227],[0.38,0.213],[0.43,0.163],[0.5,0.147],[0.49,0.085],[0.55,0.037],[0.518,-0.023],[0.54,-0.058],[0.47,-0.105],[0.48,-0.145],[0.4,-0.152],[0.36,-0.203],[0.26,-0.193],[0.15,-0.135]]",
+    "freckle": "[[0.88,0.015],[0.945,0.045],[1.006,0.095],[1.009,0.014],[1.018,-0.061],[0.96,-0.021],[0.915,-0.016]]",
+    "project": "fn pts,x,y,u,v,w,z -> pts.map(fn p -> [x+u*p[0]+w*p[1],y+v*p[0]+z*p[1]])",
+    "greens": "[[#34583C,#557F48,#789159],[#4D6D39,#71974B,#9DA95C],[#3E6643,#628948,#8CA363],[#466C40,#73904F,#97A968]]",
+    // Per variety: two rear-petal colours, veins, wing, halo, throat, lip, dark guides, lip fleck.
+    "inks": "[[#842783,#A13391,#702575,#F4E8B0,#F5DB65,#FFCF37,#FFD43C,#462638,#862C65],[#74297F,#96338F,#69266E,#7F3B9B,#DFD5EF,#FFE777,#8F3B9D,#392346,#682875],[#69318A,#8B4CA8,#5D317C,#9F78C5,#DED7F4,#FFDB55,#9A77C8,#3C294F,#704C93],[#99317D,#B6408D,#842970,#FFF0C7,#F9DF7B,#FFD044,#F9C83A,#512B3F,#8B3768]]",
+    "varieties": "[0,0,0,1,1,2,3]",
+    "mix": "fn a,b,t -> let red=fn c -> (c>>16)%256, green=fn c -> (c>>8)%256, blue=fn c -> c%256, fade=fn h,l -> int(h+(l-h)*t) for 65536*fade(red(a),red(b))+256*fade(green(a),green(b))+fade(blue(a),blue(b))"
+  },
+  "axiom": "ZS{x:-408,y:43,d:0,v:0}S{x:-205,y:105,d:0,v:1}S{x:71,y:18,d:0,v:1}S{x:352,y:91,d:0,v:3}S{x:-458,y:-90,d:1,v:0}S{x:-277,y:-144,d:1,v:2}S{x:-36,y:-58,d:1,v:0}S{x:239,y:-121,d:1,v:0}S{x:463,y:-75,d:1,v:1}S{x:-359,y:-251,d:2,v:1}S{x:-115,y:-331,d:2,v:0}S{x:145,y:-252,d:2,v:1}S{x:393,y:-307,d:2,v:0}",
+  // Growth: S seed, N dormant seed, G crown, T tip, A extending section,
+  // B mature section, U elongating flower stalk, V flower bud.
+  "symbols": [
+    "S{x:0,y:-100,d:1,v:0}",
+    "N{x:0,y:0,d:1,v:0,born:0,q:0}",
+    "G{x:0,y:0,d:1,q:0,born:0}",
+    "T{x:0,y:0,d:1,v:0,q:0,i:0,n:3,dx:0,main:0,ready:0}",
+    "A{x:0,y:0,ex:0,ey:0,k:0,d:1,v:0,q:0,i:0,n:3,dx:0,main:0,born:0,dt:4}",
+    "B{x:0,y:0,ex:0,ey:0,k:0,d:1,q:0,i:0,born:0,dt:4}",
+    "U{x:0,y:0,ex:0,ey:0,k:0,d:1,v:0,q:0,born:0,dt:9}",
+    "V{x:0,y:0,d:1,v:0,q:0,born:0}",
+    "c{x:0,y:0,ex:1,ey:0,k:0,t:1,w:2,col:#507347}",
+    "b{x:0,y:0,s:15,a:15,w:1,q:0}",
+    "g{x:0,y:0,s:4,a:80,v:0,t:0}",
+    "Q{x:0,y:0,r:1,t:1,angle:0,aspect:1,v:0,q:0}",
+    "e{x:0,y:0,a:90,angle:0,aspect:1,r:10,w:1,kind:0,v:0,pal:inks[0]}",
+    "j{x:0,y:0,u:1,v:0,w:0,z:1,t:0.5,b:0,sw:1}",
+    "o{r:1,c:#FFFFFF}",
+    "h{p:[],i:1}",
+    "i{p:[]}",
+    "Z",
+    "z{k:0,n:1}",
+    "m{k:0}",
+    "l{x:0,y:0,side:1,d:1,q:0,age:0}"
+  ],
+  "rules": [
+    {
+      "name": "A seed settles into a planting pocket",
+      "from": "S",
+      "locals": {
+        "cv": "v if random()<0.67 else varieties[int(random()*7)]"
+      },
+      "to": "N{x:x,y:y,d:d,v:cv,born:1+int(random()*9),q:int(random()*3900)}"
+    },
+    {
+      "name": "The seedling opens and two shoots start at its crown",
+      "from": "N",
+      "cond": "gen()>=born",
+      "locals": {
+        "sgn": "1 if noise(q)>0.5 else -1",
+        "lean": "sgn*(8+random()*6)"
+      },
+      "to": "G{x:x,y:y,d:d,q:q,born:gen()}T{x:x,y:y,d:d,v:v,q:q,n:4,dx:lean,main:1,ready:gen()+2}T{x:x,y:y,d:d,v:v,q:q+51,n:3,dx:-sgn*(14+random()*15),ready:gen()+5+int(random()*7)}"
+    },
+    {
+      "name": "Lay out the next leafy internode",
+      "from": "T",
+      "cond": "gen()>=ready && i<n",
+      "locals": {
+        "rise": "(23+random()*14)*(1.05-0.07*d)"
+      },
+      "to": "A{x:x,y:y,ex:x+dx+random()*16-8,ey:y+rise,k:random()*12-6,d:d,v:v,q:q,i:i,n:n,dx:dx,main:main,born:gen(),dt:3+int(random()*3)}"
+    },
+    {
+      "name": "Lift a flower stalk above the last leaves",
+      "from": "T",
+      "cond": "gen()>=ready && i==n",
+      "to": "U{x:x,y:y,ex:x+dx*(0.6+random()*1.1)+random()*24-12,ey:y+40+random()*25,k:(random()-0.5)*20,d:d,v:v,q:q,born:gen(),dt:7+int(random()*5)}"
+    },
+    {
+      "name": "Branch at the second leaf node",
+      "from": "A",
+      "cond": "gen()-born>=dt && main==1 && i==1",
+      "to": "B{x:x,y:y,ex:ex,ey:ey,k:k,d:d,q:q,i:i,born:born,dt:dt}T{x:ex,y:ey,d:d,v:v,q:q,i:i+1,n:n,dx:dx,main:main,ready:gen()}T{x:ex,y:ey,d:d,v:v,q:q+113,i:0,n:2,dx:(29+random()*14)*(1 if dx>=0 else -1),ready:gen()+6+int(random()*9)}"
+    },
+    {
+      "name": "Keep the internode and its leaves",
+      "from": "A",
+      "cond": "gen()-born>=dt && (main!=1 || i!=1)",
+      "to": "B{x:x,y:y,ex:ex,ey:ey,k:k,d:d,q:q,i:i,born:born,dt:dt}T{x:ex,y:ey,d:d,v:v,q:q,i:i+1,n:n,dx:dx,main:main,ready:gen()}"
+    },
+    {
+      "name": "Set the bud at the end of the stalk",
+      "from": "U",
+      "cond": "gen()-born>=dt",
+      "to": "c{x:x,y:y,ex:ex,ey:ey,k:k,w:2.6+0.3*d,col:#809252}V{x:ex,y:ey,d:d,v:v,q:q,born:gen()}"
+    }
+  ],
+  "drawing": [
+    {
+      "name": "Dappled earth",
+      "from": "Z",
+      "to": "z{n:128}"
+    },
+    {
+      "name": "Divide the scatter field",
+      "from": "z",
+      "cond": "n>1",
+      "to": "z{k:k,n:n//2}z{k:k+n//2,n:n//2}"
+    },
+    {
+      "name": "Draw one shadow on the soil",
+      "from": "z",
+      "cond": "n==1",
+      "to": "m{k:k}"
+    },
+    {
+      "name": "A quiet scrap of litter and a blade in shadow",
+      "from": "m",
+      "locals": {
+        "x": "(noise(k+31)-0.5)*1060",
+        "y": "(noise(k+951)-0.5)*750",
+        "a": "noise(k+655)*360",
+        "s": "11+noise(k+113)*33",
+        "col": "[#3B4D31,#344531,#405136,#30442F][k%4]"
+      },
+      "to": "[P{x:x,y:y}H{rot:a}C{color:col}(R{deg:-25}M{length:s*0.34}R{deg:12}M{length:s*0.41}R{deg:26}M{length:s*0.32}R{deg:147}M{length:s*0.43}R{deg:20}M{length:s*0.45})][P{x:x+9,y:y-8}H{rot:a+48}C{color:#475A39}F{length:s*0.33,width:0.8}]"
+    },
+    {
+      "name": "Quiet seed",
+      "from": "S",
+      "to": "[P{x:x,y:y}o{r:2.7,c:#8B8159}]"
+    },
+    {
+      "name": "Waiting seed",
+      "from": "N",
+      "to": "[P{x:x,y:y}o{r:2.7,c:#8B8159}]"
+    },
+    {
+      "name": "Leaves open around the base",
+      "from": "G",
+      "locals": {
+        "age": "gen()-born"
+      },
+      "to": "l{x:x,y:y,side:-1,d:d,q:q+380,age:age}l{x:x,y:y,side:1,d:d,q:q+723,age:age}b{x:x,y:y,s:(37+10*d+15*noise(q+7))*leaf_scale*ease((age+2-0)/12),a:23+(noise(q+8)-0.5)*32,w:1.02,q:q+7}b{x:x,y:y,s:(37+10*d+15*noise(q+23))*leaf_scale*ease((age+2-0)/12),a:157+(noise(q+24)-0.5)*32,w:1.02,q:q+23}b{x:x,y:y,s:(37+10*d+15*noise(q+32))*leaf_scale*ease((age+2-2)/12),a:65+(noise(q+33)-0.5)*32,w:1.02,q:q+32}b{x:x,y:y,s:(37+10*d+15*noise(q+46))*leaf_scale*ease((age+2-4)/12),a:128+(noise(q+47)-0.5)*32,w:1.02,q:q+46}b{x:x,y:y,s:(37+10*d+15*noise(q+19))*leaf_scale*ease((age+2-3)/12),a:204+(noise(q+20)-0.5)*32,w:1.02,q:q+19}b{x:x,y:y,s:(37+10*d+15*noise(q+82))*leaf_scale*ease((age+2-5)/12),a:-23+(noise(q+83)-0.5)*32,w:1.02,q:q+82}b{x:x,y:y,s:(37+10*d+15*noise(q+217))*leaf_scale*ease((age+2-7)/12),a:96+(noise(q+218)-0.5)*32,w:1.02,q:q+217}"
+    },
+    {
+      "name": "A bending green internode",
+      "from": "c",
+      "locals": {
+        "dx": "ex-x",
+        "dy": "ey-y",
+        "bend": "fn z -> k*4*z*(1-z)"
+      },
+      "to": "[P{x:x,y:y}C{color:col}D{x:x+dx*t*0.33+bend(t*0.33),y:y+dy*t*0.33,width:w}D{x:x+dx*t*0.67+bend(t*0.67),y:y+dy*t*0.67,width:w*0.94}D{x:x+dx*t+bend(t),y:y+dy*t,width:w*0.87}]"
+    },
+    {
+      "name": "An internode extends",
+      "from": "A",
+      "locals": {
+        "t": "min(1,(gen()-born+1)/dt)",
+        "id": "q+49*i",
+        "s": "leaf_scale*(30+9*d+19*noise(id+13))*ease((gen()-born+1)/11)",
+        "a": "8+48*noise(id+9) if (q+i)%2==0 else 135+36*noise(id+9)",
+        "stem": "#769356 if gen()-born<11 else #60814B"
+      },
+      "to": "c{x:x,y:y,ex:ex,ey:ey,k:k,t:t,w:3.7-i*0.32+0.3*d,col:stem}b{x:x,y:y,s:s,a:a,w:0.92,q:id}b{x:x,y:y,s:s*0.79,a:172-a,w:0.80,q:id+21}"
+    },
+    {
+      "name": "Leaves at a mature node",
+      "from": "B",
+      "locals": {
+        "t": "min(1,(gen()-born+1)/dt)",
+        "id": "q+49*i",
+        "s": "leaf_scale*(30+9*d+19*noise(id+13))*ease((gen()-born+1)/11)",
+        "a": "8+48*noise(id+9) if (q+i)%2==0 else 135+36*noise(id+9)",
+        "stem": "#769356 if gen()-born<11 else #60814B"
+      },
+      "to": "c{x:x,y:y,ex:ex,ey:ey,k:k,t:t,w:3.7-i*0.32+0.3*d,col:stem}b{x:x,y:y,s:s,a:a,w:0.92,q:id}b{x:x,y:y,s:s*0.79,a:172-a,w:0.80,q:id+21}"
+    },
+    {
+      "name": "A stalk straightens and its bud swells",
+      "from": "U",
+      "locals": {
+        "t": "min(1,(gen()-born+1)/dt)",
+        "tilt": "(noise(q+71)-0.5)*93"
+      },
+      "to": "c{x:x,y:y,ex:ex,ey:ey,k:k,t:t,w:2.6+0.3*d,col:#809252}g{x:x+(ex-x)*t+k*4*t*(1-t),y:y+(ey-y)*t,s:(3+8*t)*(0.9+0.12*d),a:90+tilt,v:v,t:t}"
+    },
+    {
+      "name": "The nodding bud, then the open face",
+      "from": "V",
+      "locals": {
+        "age": "gen()-born",
+        "wait": "2+int(9*noise(q+41))",
+        "t": "ease((age-wait)/opening_time)",
+        "r": "bloom_scale*(40+8*d)*(0.84+0.39*noise(q+11))",
+        "tilt": "(noise(q+71)-0.5)*49",
+        "aspect": "0.70+0.46*noise(q+15)",
+        "bs": "11*(0.9+0.12*d)*(1-t)"
+      },
+      "to": "g{x:x,y:y,s:bs,a:90+tilt,v:v,t:1}Q{x:x,y:y,r:r,t:t,angle:tilt,aspect:aspect,v:v,q:q}"
+    },
+    {
+      "name": "Green bud wrapped in pointed sepals",
+      "from": "g",
+      "cond": "s>0.05",
+      "locals": {
+        "u": "cosine(a)*s*2.1",
+        "yy": "sine(a)*s*2.1",
+        "w": "-yy*0.65",
+        "z": "u*0.65",
+        "tone": "inks[v][0] if t>0.4 else #899755"
+      },
+      "to": "[P{x:x,y:y}C{color:#607648}i{p:project(petal,x,y,u,yy,w,z)}C{color:tone}i{p:project(petal,x+0.1*u,y+0.1*yy,u*0.86,yy*0.86,w*0.76,z*0.76)}C{color:#829953}i{p:project(leaf,x,y,u*0.77+w*0.24,yy*0.77+z*0.24,w*0.48,z*0.48)}]"
+    },
+    {
+      "name": "Scalloped blade, folded face and midrib",
+      "from": "b",
+      "cond": "s>0.15",
+      "locals": {
+        "u": "s*cosine(a)",
+        "v": "s*sine(a)",
+        "z": "u*w",
+        "ww": "-v*w",
+        "bx": "x+u*0.18",
+        "by": "y+v*0.18",
+        "pal": "greens[int(4*noise(q+44))]"
+      },
+      "to": "[P{x:x,y:y}C{color:#70844D}D{x:bx,y:by,width:max(0.5,s*0.032)}C{color:pal[0]}i{p:project(leaf,bx,by,u,v,ww,z)}C{color:pal[1]}i{p:project(leaf_lit,bx,by,u,v,ww,z)}P{x:bx,y:by}C{color:pal[2]}D{x:bx+u*0.56+ww*0.025,y:by+v*0.56+z*0.025,width:max(0.4,s*0.016)}D{x:bx+u*0.92,y:by+v*0.92,width:max(0.3,s*0.008)}]"
+    },
+    {
+      "name": "Five petals spread at different times",
+      "from": "Q",
+      "cond": "t>0.005",
+      "locals": {
+        "back": "ease(t*1.30)",
+        "wing": "ease((t-0.10)*1.24)",
+        "lip": "ease((t-0.20)*1.25)"
+      },
+      "to": "e{x:x,y:y,a:119+8*noise(q),angle:angle,aspect:aspect,r:r*back*1.18,w:1.19,kind:0,v:v,pal:inks[v]}e{x:x,y:y,a:63+9*noise(q+2),angle:angle,aspect:aspect,r:r*back*1.22,w:1.16,kind:1,v:v,pal:inks[v]}e{x:x,y:y,a:151+14*wing,angle:angle,aspect:aspect,r:r*0.81*wing,w:1.25,kind:2,v:v,pal:inks[v]}e{x:x,y:y,a:29-14*wing,angle:angle,aspect:aspect,r:r*0.83*wing,w:1.23,kind:2,v:v,pal:inks[v]}e{x:x,y:y,a:-88+9*noise(q+31),angle:angle,aspect:aspect,r:r*0.92*lip,w:1.31,kind:3,v:v,pal:inks[v]}[P{x:x,y:y}o{r:r*0.071*t,c:#E7C559}H{rot:98+angle}M{length:r*0.037*t}o{r:r*0.043*t,c:#FFF3CF}]"
+    },
+    {
+      "name": "Two velvet upper petals",
+      "from": "e",
+      "cond": "r>0.12 && kind<2",
+      "locals": {
+        "vx": "r*cosine(a)*aspect",
+        "vy": "r*sine(a)",
+        "wx": "-r*sine(a)*w*aspect",
+        "wy": "r*cosine(a)*w",
+        "ca": "cosine(angle)",
+        "sa": "sine(angle)",
+        "u": "vx*ca-vy*sa",
+        "yy": "vx*sa+vy*ca",
+        "ww": "wx*ca-wy*sa",
+        "z": "wx*sa+wy*ca",
+        "size": "r",
+        "wash": "pal[0] if kind==1 else pal[2]"
+      },
+      "to": "[C{color:pal[kind]}i{p:project(petal,x,y,u,yy,ww,z)}C{color:mix(pal[kind],wash,0.45)}i{p:project(veil,x,y,u*1.08,yy*1.08,ww*1.15,z*1.15)}C{color:wash}i{p:project(veil,x,y,u*0.86,yy*0.86,ww*0.92,z*0.92)}C{color:mix(pal[2],#3F184E,0.32)}j{x:x,y:y,u:u,v:yy,w:ww,z:z,t:0.86,b:0.3,sw:size*0.021}j{x:x,y:y,u:u,v:yy,w:ww,z:z,t:0.82,b:-0.26,sw:size*0.019}j{x:x,y:y,u:u,v:yy,w:ww,z:z,t:0.91,b:0.035,sw:size*0.021}j{x:x,y:y,u:u,v:yy,w:ww,z:z,t:0.59,b:-0.34,sw:size*0.012}]"
+    },
+    {
+      "name": "Cream or lavender side petals with dark guides",
+      "from": "e",
+      "cond": "r>0.12 && kind==2",
+      "locals": {
+        "vx": "r*cosine(a)*aspect",
+        "vy": "r*sine(a)",
+        "wx": "-r*sine(a)*w*aspect",
+        "wy": "r*cosine(a)*w",
+        "ca": "cosine(angle)",
+        "sa": "sine(angle)",
+        "u": "vx*ca-vy*sa",
+        "yy": "vx*sa+vy*ca",
+        "ww": "wx*ca-wy*sa",
+        "z": "wx*sa+wy*ca",
+        "size": "r",
+        "rim": "pal[3]"
+      },
+      "to": "[C{color:rim}i{p:project(petal,x,y,u,yy,ww,z)}C{color:mix(rim,pal[4],0.16)}i{p:project(veil,x,y,u*1.12,yy*1.12,ww*1.15,z*1.15)}C{color:mix(rim,pal[4],0.32)}i{p:project(veil,x,y,u*1.085,yy*1.085,ww*1.1,z*1.1)}C{color:mix(rim,pal[4],0.5)}i{p:project(veil,x,y,u*1.05,yy*1.05,ww*1.06,z*1.06)}C{color:mix(rim,pal[4],0.68)}i{p:project(veil,x,y,u*1.015,yy*1.015,ww*1.021,z*1.021)}C{color:mix(rim,pal[4],0.84)}i{p:project(veil,x,y,u*0.975,yy*0.975,ww*0.984,z*0.984)}C{color:pal[4]}i{p:project(veil,x,y,u*0.93,yy*0.93,ww*0.94,z*0.94)}C{color:mix(pal[4],pal[5],0.62)}i{p:project(veil,x,y,u*0.69,yy*0.69,ww*0.72,z*0.72)}C{color:pal[5]}i{p:project(sun,x,y,u,yy,ww,z)}C{color:pal[7]}j{x:x,y:y,u:u,v:yy,w:ww,z:z,t:0.6,b:0.14,sw:size*0.041}j{x:x,y:y,u:u,v:yy,w:ww,z:z,t:0.48,b:-0.18,sw:size*0.037}j{x:x,y:y,u:u,v:yy,w:ww,z:z,t:0.7,b:-0.025,sw:size*0.045}]"
+    },
+    {
+      "name": "A broad lower lip with pencilled whiskers",
+      "from": "e",
+      "cond": "r>0.12 && kind==3",
+      "locals": {
+        "vx": "r*cosine(a)*aspect",
+        "vy": "r*sine(a)",
+        "wx": "-r*sine(a)*w*aspect",
+        "wy": "r*cosine(a)*w",
+        "ca": "cosine(angle)",
+        "sa": "sine(angle)",
+        "u": "vx*ca-vy*sa",
+        "yy": "vx*sa+vy*ca",
+        "ww": "wx*ca-wy*sa",
+        "z": "wx*sa+wy*ca",
+        "size": "r",
+        "wash": "mix(pal[6],#FFE64E,0.55) if (v==0 || v==3) else pal[4]"
+      },
+      "to": "[C{color:pal[6]}i{p:project(petal,x,y,u,yy,ww,z)}C{color:mix(pal[6],wash,0.16)}i{p:project(veil,x,y,u*1.12,yy*1.12,ww*1.15,z*1.15)}C{color:mix(pal[6],wash,0.32)}i{p:project(veil,x,y,u*1.085,yy*1.085,ww*1.1,z*1.1)}C{color:mix(pal[6],wash,0.5)}i{p:project(veil,x,y,u*1.05,yy*1.05,ww*1.06,z*1.06)}C{color:mix(pal[6],wash,0.68)}i{p:project(veil,x,y,u*1.015,yy*1.015,ww*1.021,z*1.021)}C{color:mix(pal[6],wash,0.84)}i{p:project(veil,x,y,u*0.975,yy*0.975,ww*0.984,z*0.984)}C{color:wash}i{p:project(veil,x,y,u*0.93,yy*0.93,ww*0.94,z*0.94)}C{color:mix(wash,pal[5],0.56)}i{p:project(veil,x,y,u*0.71,yy*0.71,ww*0.69,z*0.69)}C{color:pal[5]}i{p:project(sun,x,y,u,yy,ww,z)}C{color:pal[8]}i{p:project(freckle,x,y,u,yy,ww,z)}C{color:pal[7]}j{x:x,y:y,u:u,v:yy,w:ww,z:z,t:0.36,b:-0.25,sw:size*0.025}j{x:x,y:y,u:u,v:yy,w:ww,z:z,t:0.66,b:-0.21,sw:size*0.042}j{x:x,y:y,u:u,v:yy,w:ww,z:z,t:0.81,b:0.015,sw:size*0.044}j{x:x,y:y,u:u,v:yy,w:ww,z:z,t:0.68,b:0.19,sw:size*0.04}j{x:x,y:y,u:u,v:yy,w:ww,z:z,t:0.46,b:0.28,sw:size*0.027}]"
+    },
+    {
+      "name": "Three tapering strokes make one petal vein",
+      "from": "j",
+      "to": "P{x:x+u*0.074+w*b*0.07,y:y+v*0.074+z*b*0.07}D{x:x+u*t*0.45+w*b*0.19,y:y+v*t*0.45+z*b*0.19,width:max(0.24,sw)}D{x:x+u*t*0.76+w*b*0.64,y:y+v*t*0.76+z*b*0.64,width:max(0.2,sw*0.66)}D{x:x+u*t+w*b,y:y+v*t+z*b,width:max(0.15,sw*0.29)}"
+    },
+    {
+      "name": "Centred disc",
+      "from": "o",
+      "to": "[H{rot:0}M{length:-r}C{color:c}L{size:r}]"
+    },
+    {
+      "name": "Fill a blade-relative contour",
+      "from": "i",
+      "to": "P{x:p[0][0],y:p[0][1]}(h{p:p})"
+    },
+    {
+      "name": "Walk six contour vertices",
+      "from": "h",
+      "cond": "i+5<len(p)",
+      "to": "P{x:p[i][0],y:p[i][1]}P{x:p[i+1][0],y:p[i+1][1]}P{x:p[i+2][0],y:p[i+2][1]}P{x:p[i+3][0],y:p[i+3][1]}P{x:p[i+4][0],y:p[i+4][1]}P{x:p[i+5][0],y:p[i+5][1]}h{p:p,i:i+6}"
+    },
+    {
+      "name": "Complete the contour",
+      "from": "h",
+      "cond": "i<len(p) && i+5>=len(p)",
+      "to": "P{x:p[i][0],y:p[i][1]}h{p:p,i:i+1}"
+    },
+    {
+      "name": "Leafy side shoots fill the space between crowns",
+      "from": "l",
+      "cond": "age>4",
+      "locals": {
+        "t": "ease((age-4)/16)",
+        "dx": "side*(51+16*d+35*noise(q+11))",
+        "dy": "7+38*noise(q+23)",
+        "h": "8+10*noise(q+31)",
+        "a": "11+17*noise(q+40)"
+      },
+      "to": "[P{x:x,y:y}C{color:#59764A}D{x:x+dx*t*0.5,y:y+dy*t*0.5+h*(2*t)*(1-0.5*t),width:2.2}D{x:x+dx*t,y:y+dy*t+h*4*t*(1-t),width:1.8}]b{x:x+dx*0.3,y:y+dy*0.3+h*0.84,s:(32+12*d+11*noise(q+5))*leaf_scale*ease((age-9)/10),a:(a if side>0 else 180-a)+side*55,w:0.88,q:q+5}b{x:x+dx*0.3,y:y+dy*0.3+h*0.84,s:(32+12*d+11*noise(q+9))*leaf_scale*ease((age-9)/10),a:(a if side>0 else 180-a)+side*-47,w:0.88,q:q+9}b{x:x+dx*0.54,y:y+dy*0.54+h*0.99,s:(32+12*d+11*noise(q+13))*leaf_scale*ease((age-12)/10),a:(a if side>0 else 180-a)+side*57,w:0.88,q:q+13}b{x:x+dx*0.58,y:y+dy*0.58+h*0.97,s:(32+12*d+11*noise(q+14))*leaf_scale*ease((age-13)/10),a:(a if side>0 else 180-a)+side*-33,w:0.88,q:q+14}b{x:x+dx*0.76,y:y+dy*0.76+h*0.73,s:(32+12*d+11*noise(q+22))*leaf_scale*ease((age-15)/10),a:(a if side>0 else 180-a)+side*58,w:0.88,q:q+22}b{x:x+dx*0.79,y:y+dy*0.79+h*0.66,s:(32+12*d+11*noise(q+23))*leaf_scale*ease((age-16)/10),a:(a if side>0 else 180-a)+side*-41,w:0.88,q:q+23}b{x:x+dx*0.96,y:y+dy*0.96+h*0.15,s:(32+12*d+11*noise(q+26))*leaf_scale*ease((age-18)/10),a:(a if side>0 else 180-a)+side*18,w:0.88,q:q+26}"
+    }
+  ]
+}

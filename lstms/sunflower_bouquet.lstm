@@ -1,0 +1,54 @@
+{
+  "name": "Sunflower Bouquet",
+  "recommended_iterations": 8,
+  "description": "Five substantial sunflowers of different heights with broad leaves, double petal rings and detailed seed heads.",
+  "notes": [
+    "B draws 28 petals and 13 seed details around a centered brown disk.",
+    "The stems slowly turn upright; the leaves alternate in size and shade.",
+    "Terminal flower radius uses a local list of measurements and a reduction."
+  ],
+  "axiom": "S",
+  "symbols": [
+    "S{scale: 1}",
+    "d{r: 1, c: #FFFFFF}",
+    "E{r: 3, c: #4F8B42}",
+    "B{r: 12}",
+    "T{n: 6, length: 48, h: 0, id: 1, u: 1}"
+  ],
+  "drawing": [
+    {
+      "from": "S",
+      "to": ""
+    },
+    {
+      "from": "d",
+      "to": "[C{color: c}M{length: -r}L{size: r}]"
+    },
+    {
+      "from": "E",
+      "to": "[[M{length: r * 0.7}d{r: r * 0.7, c: c}][M{length: r * 1.5}d{r: r * 0.95, c: c}][M{length: r * 2.3}d{r: r * 0.65, c: c}]C{color: #739653}F{length: r * 2.8, width: max(0.4, r * 0.13)}]"
+    },
+    {
+      "from": "B",
+      "to": "[[R{deg: 0.0}M{length: r * 1.9}d{r: r * 0.73, c: #DFA627}][R{deg: 22.5}M{length: r * 1.9}d{r: r * 0.73, c: #DFA627}][R{deg: 45.0}M{length: r * 1.9}d{r: r * 0.73, c: #DFA627}][R{deg: 67.5}M{length: r * 1.9}d{r: r * 0.73, c: #DFA627}][R{deg: 90.0}M{length: r * 1.9}d{r: r * 0.73, c: #DFA627}][R{deg: 112.5}M{length: r * 1.9}d{r: r * 0.73, c: #DFA627}][R{deg: 135.0}M{length: r * 1.9}d{r: r * 0.73, c: #DFA627}][R{deg: 157.5}M{length: r * 1.9}d{r: r * 0.73, c: #DFA627}][R{deg: 180.0}M{length: r * 1.9}d{r: r * 0.73, c: #DFA627}][R{deg: 202.5}M{length: r * 1.9}d{r: r * 0.73, c: #DFA627}][R{deg: 225.0}M{length: r * 1.9}d{r: r * 0.73, c: #DFA627}][R{deg: 247.5}M{length: r * 1.9}d{r: r * 0.73, c: #DFA627}][R{deg: 270.0}M{length: r * 1.9}d{r: r * 0.73, c: #DFA627}][R{deg: 292.5}M{length: r * 1.9}d{r: r * 0.73, c: #DFA627}][R{deg: 315.0}M{length: r * 1.9}d{r: r * 0.73, c: #DFA627}][R{deg: 337.5}M{length: r * 1.9}d{r: r * 0.73, c: #DFA627}][R{deg: 12}M{length: r * 1.65}d{r: r * 0.62, c: #F8CA44}][R{deg: 42}M{length: r * 1.65}d{r: r * 0.62, c: #F8CA44}][R{deg: 72}M{length: r * 1.65}d{r: r * 0.62, c: #F8CA44}][R{deg: 102}M{length: r * 1.65}d{r: r * 0.62, c: #F8CA44}][R{deg: 132}M{length: r * 1.65}d{r: r * 0.62, c: #F8CA44}][R{deg: 162}M{length: r * 1.65}d{r: r * 0.62, c: #F8CA44}][R{deg: 192}M{length: r * 1.65}d{r: r * 0.62, c: #F8CA44}][R{deg: 222}M{length: r * 1.65}d{r: r * 0.62, c: #F8CA44}][R{deg: 252}M{length: r * 1.65}d{r: r * 0.62, c: #F8CA44}][R{deg: 282}M{length: r * 1.65}d{r: r * 0.62, c: #F8CA44}][R{deg: 312}M{length: r * 1.65}d{r: r * 0.62, c: #F8CA44}][R{deg: 342}M{length: r * 1.65}d{r: r * 0.62, c: #F8CA44}]d{r: r * 1.1, c: #62452D}d{r: r * 0.85, c: #806039}[R{deg: 0}M{length: r * 0.62}d{r: r * 0.09, c: #C1A265}][R{deg: 30}M{length: r * 0.62}d{r: r * 0.09, c: #C1A265}][R{deg: 60}M{length: r * 0.62}d{r: r * 0.09, c: #C1A265}][R{deg: 90}M{length: r * 0.62}d{r: r * 0.09, c: #C1A265}][R{deg: 120}M{length: r * 0.62}d{r: r * 0.09, c: #C1A265}][R{deg: 150}M{length: r * 0.62}d{r: r * 0.09, c: #C1A265}][R{deg: 180}M{length: r * 0.62}d{r: r * 0.09, c: #C1A265}][R{deg: 210}M{length: r * 0.62}d{r: r * 0.09, c: #C1A265}][R{deg: 240}M{length: r * 0.62}d{r: r * 0.09, c: #C1A265}][R{deg: 270}M{length: r * 0.62}d{r: r * 0.09, c: #C1A265}][R{deg: 300}M{length: r * 0.62}d{r: r * 0.09, c: #C1A265}][R{deg: 330}M{length: r * 0.62}d{r: r * 0.09, c: #C1A265}]d{r: r * 0.2, c: #4D3928}]"
+    },
+    {
+      "from": "T",
+      "to": "d{r: 3 * u, c: #79A246}"
+    }
+  ],
+  "rules": [
+    {
+      "from": "S",
+      "to": "M{length: 24 * scale}[R{deg: -24}T{n: 5, length: 40 * scale, h: -24, id: 0, u: scale}][R{deg: -12}T{n: 6, length: 49 * scale, h: -12, id: 1, u: scale}][R{deg: 0}T{n: 6, length: 57 * scale, h: 0, id: 2, u: scale}][R{deg: 13}T{n: 6, length: 46 * scale, h: 13, id: 3, u: scale}][R{deg: 25}T{n: 5, length: 37 * scale, h: 25, id: 4, u: scale}]"
+    },
+    {
+      "from": "T{n: fn v -> v > 0}",
+      "to": "C{color: #658B42}F{length: length, width: (2 + n * 0.55) * u}[R{deg: -65}E{r: (5.5 + n * 0.5) * u, c: #54883D}][R{deg: 62}E{r: (4.3 + n * 0.45) * u, c: #739A46}]R{deg: -h * 0.12}T{n: n - 1, length: length * 0.96, h: h * 0.88, id: id, u: u}"
+    },
+    {
+      "from": "T{n: 0}",
+      "to": "B{r: let sizes = [11, 12, 13, 14] for (sizes.reduce(fn a, b -> a + b) / sizes.len() + id % 2) * u}"
+    }
+  ]
+}

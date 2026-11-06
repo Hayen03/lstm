@@ -1,0 +1,354 @@
+// One year = 96 frames. Try year:24 for a time-lapse.
+{
+  "name": "Elderspiral \u2014 the hollow orchard",
+  "description": "A slow-growing orchard veteran. Old wood winds and swells; dying tips leave snags and the shoulders sprout again.",
+  "seed": "elder-spiral",
+  "bg": "#E9E5D6",
+  "recommended_iterations": 5040,
+  "globals": {
+    "year": "96",
+    "dt": "360/year",
+    "ground": "-405",
+    "maturity": "4",
+    "max_depth": "5",
+    "annual_extension": "30",
+    "grow_end": "0.56",
+    "phase": "fn t -> (t%year)/year",
+    "years": "fn t -> t/year",
+    "active": "fn t -> phase(t)<grow_end",
+    "wood_time": "fn t -> (t//year)*grow_end+min(phase(t),grow_end)",
+    "target": "fn d -> 98 if d==0 else 70*0.85.pow(d-1)",
+    "step": "annual_extension/(year*grow_end)",
+    "leaf_color": "fn q -> #59874B if q<0.57 else (#A8A84F if q<0.67 else #C17B3F)",
+    "wave": "fn t -> 1-abs(4*(t%1)-2)",
+    "fruit_chance": "0.42",
+    "veteran": "18",
+    "ageof": "fn b -> max(0,wood_time(gen())-wood_time(b))/grow_end",
+    "woodw": "fn age,d -> max(0.7,(1+82*age/(age+19))*0.70.pow(d))"
+  },
+  "axiom": "ZP{x:0,y:ground}H{rot:90}S",
+  "symbols": [
+    "Z",
+    "O{r:3,c:#FFFFFF}",
+    "S{a:0}",
+    "B{d:0,l:0.1,born:0,done:0,t:96,h:90,k:0}",
+    "V{d:0,last:-1,q:0,born:0,renewed:0}",
+    "N{s:15,c:#679D57}",
+    "K{q:0}",
+    "Q{s:3.5}",
+    "U{q:0}",
+    "T{x:0,y:0,v:0.5,vx:0}",
+    "G{x:0,a:0}",
+    "J{x:0,y:0,v:0.7,vx:0,h:0,s:16,a:0}",
+    "W{x:0,s:16,h:0,a:0}",
+    "I{a:0,s:16,q:0,born:0}",
+    "Y{d:0,q:0,p:0}",
+    "a{n:0,l:1,w:1,bend:0,tw:0,dead:0}",
+    "e{born:0,q:0}",
+    "f",
+    "b{born:0,ang:25}",
+    "p{s:16,c:#698C4A}"
+  ],
+  "drawing": [
+    {
+      "from": "Z",
+      "to": "[P{x:-630,y:ground}H{rot:0}C{color:#526D50}F{length:1260,width:5}][P{x:-630,y:ground-18}H{rot:0}C{color:#8AB477 if phase(gen())<0.28 else (#D3BD6E if phase(gen())<0.60 else (#BD784D if phase(gen())<0.86 else #829FAB))}F{length:1260*phase(gen()),width:3}]"
+    },
+    {
+      "from": "O",
+      "to": "[C{color:c}M{length:-r}L{size:r}]"
+    },
+    {
+      "from": "S",
+      "to": "[H{rot:25}O{r:3,c:#AF8950}]"
+    },
+    {
+      "from": "V",
+      "to": ""
+    },
+    {
+      "from": "N",
+      "to": "[C{color:c}(R{deg:-20}F{length:s*0.53,width:0.65}R{deg:40}F{length:s*0.53,width:0.65}R{deg:140}F{length:s*0.53,width:0.65}R{deg:40}F{length:s*0.53,width:0.65})]"
+    },
+    {
+      "from": "K",
+      "to": "[H{rot:270}M{length:6}Q{s:3.3}]"
+    },
+    {
+      "from": "Q",
+      "to": "[R{deg:0}M{length:s}O{r:s,c:#F3D6C0}][R{deg:72}M{length:s}O{r:s,c:#F3D6C0}][R{deg:144}M{length:s}O{r:s,c:#F3D6C0}][R{deg:216}M{length:s}O{r:s,c:#F3D6C0}][R{deg:288}M{length:s}O{r:s,c:#F3D6C0}]O{r:s*0.5,c:#DCAA53}"
+    },
+    {
+      "from": "U",
+      "locals": {
+        "r": "2+4.5*min(1,max(0,(phase(gen())-0.28-q*0.07)/0.22))"
+      },
+      "to": "[H{rot:270}M{length:6}O{r:r,c:#91AA51 if phase(gen())<0.46+q*0.08 else #C4A147}]"
+    },
+    {
+      "from": "T",
+      "to": "[P{x:x,y:y}O{r:7,c:#D1AF52}]"
+    },
+    {
+      "from": "G",
+      "locals": {
+        "r": "7 if a<year*0.12 else max(0.4,7*(1-(a/year-0.12)/0.12))",
+        "c": "#D8A14B if a<year*0.035 else (#CD6643 if a<year*0.12 else #77553A)"
+      },
+      "to": "[P{x:x,y:ground+r}O{r:r,c:c}]"
+    },
+    {
+      "from": "J",
+      "to": "[P{x:x,y:y}H{rot:h}p{s:s,c:#C39045}]"
+    },
+    {
+      "from": "W",
+      "to": "[P{x:x,y:ground+1}H{rot:h}p{s:max(0.3,s*(1-a/(year*0.12))),c:#8F713F}]"
+    },
+    {
+      "from": "I",
+      "locals": {
+        "size": "s*min(1,0.08+(gen()-born)/(year*0.09))",
+        "c": "(#77984D if q<0.45 else #537C49) if phase(gen())+(q-0.5)*0.13<0.57 else leaf_color(phase(gen())+(q-0.5)*0.13)"
+      },
+      "to": "[R{deg:a}p{s:size,c:c}]"
+    },
+    {
+      "from": "Y",
+      "to": ""
+    },
+    {
+      "name": "Wood lengthens and bends",
+      "from": "B",
+      "to": "H{rot:h+sag}a{n:7,l:unit,w:w,bend:k/7,tw:tw}",
+      "locals": {
+        "age": "ageof(born)",
+        "w": "woodw(age,d)",
+        "unit": "l*(1+1.2*age/(age+34))/7",
+        "tw": "(1 if k>=0 else -1)*(age/(age+14))*(22 if d==0 else (12 if d<3 else 4))",
+        "sag": "(1 if h>=90 else -1)*min(19,age*0.6) if d>0 else 0"
+      }
+    },
+    {
+      "name": "Ancient root flare and hollow",
+      "from": "B{d:0}",
+      "to": "[H{rot:0}C{color:#634837}M{length:-w*1.32}(D{x:px-w*0.36,y:py+w*0.85,width:1}D{x:px+w*0.36,y:py+w*0.85,width:1}D{x:px+w*1.4,y:py,width:1}D{x:px-w*1.32,y:py,width:1})]H{rot:h+sag}a{n:7,l:unit,w:w,bend:k/7,tw:tw}[P{x:px+w*0.04+(-0.1725)*w,y:py+w*0.44+(-0.3680)*w}C{color:#957652}(D{x:px+w*0.04+(-0.1725)*w,y:py+w*0.44+(0.1610)*w,width:1}D{x:px+w*0.04+(-0.0575)*w,y:py+w*0.44+(0.5290)*w,width:1}D{x:px+w*0.04+(0.0633)*w,y:py+w*0.44+(0.4140)*w,width:1}D{x:px+w*0.04+(0.1610)*w,y:py+w*0.44+(0.1380)*w,width:1}D{x:px+w*0.04+(0.2070)*w,y:py+w*0.44+(-0.2760)*w,width:1}D{x:px+w*0.04+(0.1035)*w,y:py+w*0.44+(-0.3680)*w,width:1}D{x:px+w*0.04+(-0.1725)*w,y:py+w*0.44+(-0.3680)*w,width:1})][P{x:px+w*0.04+(-0.1320)*w,y:py+w*0.44+(-0.2816)*w}C{color:#392F29}(D{x:px+w*0.04+(-0.1320)*w,y:py+w*0.44+(0.1232)*w,width:1}D{x:px+w*0.04+(-0.0440)*w,y:py+w*0.44+(0.4048)*w,width:1}D{x:px+w*0.04+(0.0484)*w,y:py+w*0.44+(0.3168)*w,width:1}D{x:px+w*0.04+(0.1232)*w,y:py+w*0.44+(0.1056)*w,width:1}D{x:px+w*0.04+(0.1584)*w,y:py+w*0.44+(-0.2112)*w,width:1}D{x:px+w*0.04+(0.0792)*w,y:py+w*0.44+(-0.2816)*w,width:1}D{x:px+w*0.04+(-0.1320)*w,y:py+w*0.44+(-0.2816)*w,width:1})]",
+      "cond": "ageof(born)>=veteran",
+      "locals": {
+        "age": "ageof(born)",
+        "w": "woodw(age,d)",
+        "unit": "l*(1+1.2*age/(age+34))/7",
+        "tw": "(1 if k>=0 else -1)*(age/(age+14))*(22 if d==0 else (12 if d<3 else 4))",
+        "sag": "(1 if h>=90 else -1)*min(19,age*0.6) if d>0 else 0",
+        "px": "pos()[0]",
+        "py": "pos()[1]"
+      },
+      "specificity": 3
+    },
+    {
+      "name": "Soft twig arc",
+      "from": "a{n:fn x -> x>0}",
+      "to": "R{deg:-(bend+tw*(n-4)/3)}C{color:#84644A}F{length:l,width:w}a{n:n-1,l:l,w:w*0.986,bend:bend,tw:tw,dead:dead}"
+    },
+    {
+      "name": "Furrow follows the curve",
+      "from": "a{n:fn x -> x>0}",
+      "to": "R{deg:-(bend+tw*(n-4)/3)}[C{color:#634837}F{length:l,width:w}][R{deg:90}M{length:w*(0.18+(n-4)*0.038)}R{deg:-90}C{color:#A48861}F{length:l,width:max(0.6,w*0.085)}]M{length:l}a{n:n-1,l:l,w:w*0.986,bend:bend,tw:tw,dead:dead}",
+      "cond": "w>=4",
+      "specificity": 2
+    },
+    {
+      "name": "Raised collar at the first fork",
+      "from": "B{d:0} < a{n:7}",
+      "to": "R{deg:-(bend+tw*(n-4)/3)}O{r:w*0.51,c:#6E513B}[C{color:#634837}F{length:l,width:w}][R{deg:90}M{length:w*(0.18+(n-4)*0.038)}R{deg:-90}C{color:#A48861}F{length:l,width:max(0.6,w*0.085)}]M{length:l}a{n:n-1,l:l,w:w*0.986,bend:bend,tw:tw,dead:dead}",
+      "cond": "w>=7",
+      "specificity": 3
+    },
+    {
+      "name": "Silver wood beside a broken tip",
+      "from": "B{d:max_depth} > (e|f)",
+      "to": "H{rot:h+sag}a{n:7,l:unit,w:w,bend:k/7,tw:tw,dead:1}",
+      "locals": {
+        "age": "ageof(born)",
+        "w": "woodw(age,d)",
+        "unit": "l*(1+1.2*age/(age+34))/7",
+        "tw": "(1 if k>=0 else -1)*(age/(age+14))*(22 if d==0 else (12 if d<3 else 4))",
+        "sag": "(1 if h>=90 else -1)*min(19,age*0.6) if d>0 else 0"
+      }
+    },
+    {
+      "name": "Exposed grain",
+      "from": "a{dead:1,n:fn x -> x>0}",
+      "to": "R{deg:-(bend+tw*(n-4)/3)}C{color:#A6A08E}F{length:l,width:w}a{n:n-1,l:l,w:w*0.986,bend:bend,tw:tw,dead:dead}",
+      "specificity": 4
+    },
+    {
+      "name": "Silver snag",
+      "from": "e",
+      "to": "[R{deg:24}C{color:#9E9786}F{length:13,width:3}R{deg:-41}F{length:6,width:1.2}]"
+    },
+    {
+      "name": "Broken spur scar",
+      "from": "f",
+      "to": "[C{color:#B5A78B}O{r:3,c:#B5A78B}]"
+    },
+    {
+      "name": "Young shoot from a snag",
+      "from": "b",
+      "to": "R{deg:ang}C{color:#836A50}F{length:min(58,ageof(born)*8),width:min(7,1+ageof(born)*0.44)}"
+    },
+    {
+      "name": "Compound leaf with a midrib",
+      "from": "p",
+      "to": "[C{color:c}F{length:s*0.36,width:1}[R{deg:-44}N{s:s*0.84,c:c}][R{deg:49}N{s:s*0.73,c:c}]F{length:s*0.44,width:0.8}N{s:s*0.94,c:c}]"
+    }
+  ],
+  "rules": [
+    {
+      "name": "Seed waits",
+      "from": "S",
+      "to": "S{a:a+1}",
+      "cond": "a<year*0.06"
+    },
+    {
+      "name": "Seed becomes sapling",
+      "from": "S",
+      "to": "B{born:gen(),k:(random()-0.5)*9}V{q:random()}",
+      "cond": "a>=year*0.06"
+    },
+    {
+      "name": "Slow warm-season extension",
+      "from": "B",
+      "to": "B{d:d,l:min(t,l+step),born:born,done:done,t:t,h:h,k:k}",
+      "cond": "done==0 && l<t && active(gen())"
+    },
+    {
+      "name": "Unequal fork to left",
+      "from": "B",
+      "to": "B{d:d,l:l,born:born,done:1,t:t,h:h,k:k}[B{d:d+1,born:gen(),t:target(d+1)*(0.72+random()*0.56),h:(heading()+8+random()*23).clamp(9,171),k:(random()-0.5)*24}V{d:d+1,q:random(),born:gen()}][B{d:d+1,born:gen(),t:target(d+1)*(0.72+random()*0.56),h:(heading()-30-random()*29).clamp(9,171),k:(random()-0.5)*24}V{d:d+1,q:random(),born:gen()}]",
+      "cond": "done==0 && l>=t && d<max_depth && active(gen())",
+      "weight": 35
+    },
+    {
+      "name": "Unequal fork to right",
+      "from": "B",
+      "to": "B{d:d,l:l,born:born,done:1,t:t,h:h,k:k}[B{d:d+1,born:gen(),t:target(d+1)*(0.72+random()*0.56),h:(heading()-8-random()*23).clamp(9,171),k:(random()-0.5)*24}V{d:d+1,q:random(),born:gen()}][B{d:d+1,born:gen(),t:target(d+1)*(0.72+random()*0.56),h:(heading()+30+random()*29).clamp(9,171),k:(random()-0.5)*24}V{d:d+1,q:random(),born:gen()}]",
+      "cond": "done==0 && l>=t && d<max_depth && active(gen())",
+      "weight": 35
+    },
+    {
+      "name": "Single crooked continuation",
+      "from": "B",
+      "to": "B{d:d,l:l,born:born,done:1,t:t,h:h,k:k}[B{d:d+1,born:gen(),t:target(d+1)*(0.72+random()*0.56),h:(heading()+(random()-0.5)*36).clamp(9,171),k:(random()-0.5)*24}V{d:d+1,q:random(),born:gen()}]",
+      "cond": "done==0 && l>=t && d<max_depth && active(gen()) && d>0",
+      "weight": 30
+    },
+    {
+      "name": "Spring canopy renewal",
+      "from": "V",
+      "to": "V{d:d,last:gen()//year,q:q,born:born,renewed:renewed}I{a:-125+(random()-0.5)*30,s:12+random()*10,q:random(),born:gen()}I{a:-75+(random()-0.5)*30,s:12+random()*10,q:random(),born:gen()}I{a:-25+(random()-0.5)*30,s:12+random()*10,q:random(),born:gen()}I{a:25+(random()-0.5)*30,s:12+random()*10,q:random(),born:gen()}I{a:75+(random()-0.5)*30,s:12+random()*10,q:random(),born:gen()}I{a:125+(random()-0.5)*30,s:12+random()*10,q:random(),born:gen()}Y{d:d,q:random(),p:random()}",
+      "cond": "last<gen()//year && phase(gen())>=0.045+q*0.07 && phase(gen())<0.52"
+    },
+    {
+      "name": "Juvenile or nonfruiting site",
+      "from": "Y",
+      "to": "",
+      "cond": "years(gen())<maturity || d==0 || p>=fruit_chance || phase(gen())>=0.26"
+    },
+    {
+      "name": "Individual spring blossoms",
+      "from": "Y",
+      "to": "K{q:q}",
+      "cond": "years(gen())>=maturity && d>0 && p<fruit_chance && phase(gen())>=0.14+q*0.07 && phase(gen())<0.26"
+    },
+    {
+      "name": "Flowers set fruit",
+      "from": "K",
+      "to": "U{q:q}",
+      "cond": "phase(gen())>=0.28+q*0.07"
+    },
+    {
+      "name": "Individual fruit drop",
+      "from": "U",
+      "to": "T{x:pos()[0],y:pos()[1]-6,vx:(q-0.5)*1.3}",
+      "cond": "phase(gen())>=0.50+q*0.22"
+    },
+    {
+      "name": "Individual autumn leaf fall",
+      "from": "I",
+      "to": "J{x:pos()[0],y:pos()[1],h:heading()-a,vx:(q-0.5)*1.5,s:s}",
+      "cond": "phase(gen())>=0.64+q*0.20"
+    },
+    {
+      "name": "Fruit falls",
+      "from": "T",
+      "to": "T{x:x+vx*dt,y:max(ground+7,y-v*dt),v:v+0.28*dt,vx:vx}",
+      "cond": "y>ground+7"
+    },
+    {
+      "name": "Fruit lands",
+      "from": "T",
+      "to": "G{x:x}",
+      "cond": "y<=ground+7"
+    },
+    {
+      "name": "Fruit ripens on the ground",
+      "from": "G",
+      "to": "G{x:x,a:a+1}",
+      "cond": "a<year*0.24"
+    },
+    {
+      "name": "Fruit composts without seeds",
+      "from": "G",
+      "to": "",
+      "cond": "a>=year*0.24"
+    },
+    {
+      "name": "Leaf tumbles",
+      "from": "J",
+      "to": "J{x:x+(vx+0.3*wave((gen()+a)*dt/20))*dt,y:max(ground+1,y-v*dt),v:min(5,v+0.08*dt),vx:vx,h:h+7*dt,s:s,a:a+1}",
+      "cond": "y>ground+1"
+    },
+    {
+      "name": "Leaf lands",
+      "from": "J",
+      "to": "W{x:x,s:s,h:h}",
+      "cond": "y<=ground+1"
+    },
+    {
+      "name": "Leaf litter fades",
+      "from": "W",
+      "to": "W{x:x,s:s,h:h,a:a+1}",
+      "cond": "a<year*0.12"
+    },
+    {
+      "name": "Leaf litter disappears",
+      "from": "W",
+      "to": "",
+      "cond": "a>=year*0.12"
+    },
+    {
+      "name": "Old shoulder breaks bud",
+      "from": "B{d:1} < V{d:1}",
+      "to": "V{d:d,last:last,q:q,born:born,renewed:1}[B{d:3,born:gen(),t:56,h:upright,k:(q-0.5)*26}V{d:3,born:gen(),q:random()}]",
+      "cond": "renewed==0 && years(gen())>=veteran+q*7 && active(gen())",
+      "locals": {
+        "upright": "(90+(q-0.5)*54)"
+      }
+    },
+    {
+      "name": "Old outer tip dies",
+      "from": "V{d:max_depth}",
+      "to": "e{born:gen(),q:q}",
+      "cond": "ageof(born)>=15+q*13 && phase(gen())>=0.87"
+    },
+    {
+      "name": "New lateral beside the break",
+      "from": "e",
+      "to": "f[b{born:gen(),ang:(q-0.5)*75}V{d:max_depth+1,born:gen(),q:random()}]",
+      "cond": "ageof(born)>=2+q*3 && active(gen())"
+    }
+  ],
+  "width": 1400,
+  "height": 1000
+}

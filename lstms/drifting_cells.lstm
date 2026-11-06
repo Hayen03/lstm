@@ -1,0 +1,111 @@
+{
+  "name": "Drifting cells \u2014 growth, division and crowding",
+  "description": "Stylised cells with persistent random motion, crowd-sensitive growth, cytokinesis and eventual death. Not a biological model.",
+  "seed": "cells-2026",
+  "recommended_iterations": 500,
+  "bg": "#102C38",
+  "globals": {
+    "dish_x": "340",
+    "dish_y": "220",
+    "mature": "17",
+    "birth_size": "mature/1.4142135623730951",
+    "growth": "0.22",
+    "split_time": "10",
+    "max_age": "210",
+    "capacity": "36",
+    "spacing": "55",
+    "nearby": "fn x,y -> len(marked().filter(fn m -> (m.x-x)*(m.x-x)+(m.y-y)*(m.y-y)<spacing*spacing))-1",
+    "rate": "fn x,y -> growth/(1+max(0,nearby(x,y))*0.7)",
+    "dx": "fn x,v -> -v if abs(x+v)>dish_x else v",
+    "dy": "fn y,v -> -v if abs(y+v)>dish_y else v",
+    "jitter": "fn v -> (v*0.96+(random()-0.5)*0.32).clamp(-1.1,1.1)"
+  },
+  "axiom": "ZA{x:-130,y:-60,vx:0.6,vy:0.35,r:11,a:0}A{x:0,y:80,vx:0.6,vy:0.35,r:14,a:20}A{x:135,y:-30,vx:0.6,vy:0.35,r:16,a:40}",
+  "symbols": [
+    "Z",
+    "O{r:10,c:#61B6A4}",
+    "K{r:12,c:#61B6A4}",
+    "A{x:0,y:0,vx:0,vy:0,r:10,a:0}",
+    "J{x:0,y:0,vx:0,vy:0,t:0,axis:1}",
+    "E{x:0,y:0,r:10,t:0}"
+  ],
+  "drawing": [
+    {
+      "from": "Z",
+      "to": "[P{x:-dish_x-22,y:-dish_y-22}H{rot:0}C{color:#295462}F{length:2*dish_x+44,width:2}R{deg:-90}F{length:2*dish_y+44,width:2}R{deg:-90}F{length:2*dish_x+44,width:2}R{deg:-90}F{length:2*dish_y+44,width:2}]"
+    },
+    {
+      "from": "O",
+      "to": "[C{color:c}H{rot:0}M{length:-r}L{size:r}]"
+    },
+    {
+      "from": "K",
+      "to": "O{r:r,c:#326D78}O{r:r*0.88,c:c}[P{x:pos()[0]-r*0.18,y:pos()[1]+r*0.1}O{r:r*0.3,c:#D5E6AA}][P{x:pos()[0]+r*0.4,y:pos()[1]-r*0.3}O{r:r*0.12,c:#A3D9B5}]"
+    },
+    {
+      "from": "A",
+      "locals": {
+        "record": "mark({'x':x,'y':y})",
+        "shade": "#67BFA4 if a<max_age*0.75 else #829999"
+      },
+      "to": "[P{x:x,y:y}K{r:r,c:shade}]"
+    },
+    {
+      "from": "J",
+      "locals": {
+        "record": "mark({'x':x,'y':y})",
+        "sep": "birth_size*t/split_time",
+        "rad": "mature+(birth_size-mature)*t/split_time"
+      },
+      "to": "[P{x:x-sep if axis==0 else x,y:y-sep if axis==1 else y}K{r:rad,c:#87CFB0}][P{x:x+sep if axis==0 else x,y:y+sep if axis==1 else y}K{r:rad,c:#87CFB0}]"
+    },
+    {
+      "from": "E",
+      "to": "[P{x:x,y:y}O{r:max(0.2,r*(1-t/14)),c:#45616A}]"
+    }
+  ],
+  "rules": [
+    {
+      "name": "Cell dies",
+      "from": "A",
+      "to": "E{x:x,y:y,r:r}",
+      "cond": "a>=max_age"
+    },
+    {
+      "name": "Begin division",
+      "from": "A",
+      "to": "J{x:x,y:y,vx:vx,vy:vy,axis:0 if random()<0.5 else 1}",
+      "cond": "a<max_age && r>=mature && len(marked())<capacity && nearby(x,y)<5"
+    },
+    {
+      "name": "Drift and grow",
+      "from": "A",
+      "to": "A{x:(x+dx(x,vx)).clamp(-dish_x,dish_x),y:(y+dy(y,vy)).clamp(-dish_y,dish_y),vx:jitter(dx(x,vx)),vy:jitter(dy(y,vy)),r:min(mature,r+rate(x,y)),a:a+1}",
+      "cond": "a<max_age && !(r>=mature && len(marked())<capacity && nearby(x,y)<5)"
+    },
+    {
+      "name": "Pinch membrane",
+      "from": "J",
+      "to": "J{x:x,y:y,vx:vx,vy:vy,t:t+1,axis:axis}",
+      "cond": "t<split_time"
+    },
+    {
+      "name": "Two daughters",
+      "from": "J",
+      "to": "A{x:(x-birth_size if axis==0 else x).clamp(-dish_x,dish_x),y:(y-birth_size if axis==1 else y).clamp(-dish_y,dish_y),vx:-0.8 if axis==0 else vx,vy:-0.8 if axis==1 else vy,r:birth_size}A{x:(x+birth_size if axis==0 else x).clamp(-dish_x,dish_x),y:(y+birth_size if axis==1 else y).clamp(-dish_y,dish_y),vx:0.8 if axis==0 else vx,vy:0.8 if axis==1 else vy,r:birth_size}",
+      "cond": "t>=split_time"
+    },
+    {
+      "name": "Decay dead cell",
+      "from": "E",
+      "to": "E{x:x,y:y,r:r,t:t+1}",
+      "cond": "t<14"
+    },
+    {
+      "name": "Clear debris",
+      "from": "E",
+      "to": "",
+      "cond": "t>=14"
+    }
+  ]
+}

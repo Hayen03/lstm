@@ -1,0 +1,24 @@
+[package]
+name = "lstm"
+version = "2.0.0"
+edition = "2024"
+description = "Rendering engine for l-systems"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/Hayen03/lstm"
+readme = "./readme.md"
+rust-version = "1.87"
+documentation = "https://hayen.ca/docs/lstm/lstm-rust/index.html"
+keywords = ["engine", "l-system"]
+
+[dependencies]
+formulas = { git="https://github.com/Hayen03/formulas.git" }
+clap = {version="4",features=["derive"]}
+gif = "0.13"
+indexmap = {version="2",features=["serde"]}
+json5 = "0.4"
+minifb = "0.28"
+serde = {version="1",features=["derive"]}
+serde_json = {version="1",features=["preserve_order"]}
+tiny-skia = "0.11"
+png = "0.17"
+tempfile = "3"
