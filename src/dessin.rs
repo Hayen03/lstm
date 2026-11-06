@@ -84,22 +84,22 @@ impl Dessin {
             })
         };
         let p = self.pose.p;
-        match t.ch {
-            'F' | 'M' | 'D' | 'P' => {
+        match t.ch.as_ref() {
+            "F" | "M" | "D" | "P" => {
                 // F/M move relative to the heading; D/P use absolute coordinates.
                 // Only F and D leave a stroke, but all four extend an active fill.
-                let next = if matches!(t.ch, 'F' | 'M') {
+                let next = if matches!(t.ch.as_ref(), "F" | "M") {
                     self.forward(n("length", 1.)?)
                 } else {
                     (n("x", p.0)?, n("y", p.1)?)
                 };
-                if self.capture && matches!(t.ch, 'F' | 'D') {
+                if self.capture && matches!(t.ch.as_ref(), "F" | "D") {
                     self.shapes
                         .push(Shape::Line(p, next, n("width", 1.)?, self.pose.color))
                 }
                 self.go(next);
             }
-            'L' => {
+            "L" => {
                 // A leaf disk is centered one radius ahead without moving the turtle.
                 let r = n("size", 1.)?;
                 if self.capture {
@@ -107,7 +107,7 @@ impl Dessin {
                         .push(Shape::Disk(self.forward(r), r, self.pose.color))
                 }
             }
-            'C' => {
+            "C" => {
                 self.pose.color = t
                     .args
                     .get("color")
@@ -115,17 +115,17 @@ impl Dessin {
                     .transpose()?
                     .unwrap_or(0) as u32
             }
-            'R' => self.pose.heading = (self.pose.heading - n("deg", 0.)?).rem_euclid(360.),
-            'H' => self.pose.heading = n("rot", self.pose.heading)?.rem_euclid(360.),
-            '[' => self.stack.push(self.pose),
-            ']' => {
+            "R" => self.pose.heading = (self.pose.heading - n("deg", 0.)?).rem_euclid(360.),
+            "H" => self.pose.heading = n("rot", self.pose.heading)?.rem_euclid(360.),
+            "[" => self.stack.push(self.pose),
+            "]" => {
                 if let Some(state) = self.stack.pop() {
                     self.go(state.p);
                     self.pose = state
                 }
             }
-            '(' if self.capture => self.fill = Some((self.shapes.len(), vec![p])),
-            ')' => {
+            "(" if self.capture => self.fill = Some((self.shapes.len(), vec![p])),
+            ")" => {
                 if let Some((i, pts)) = self.fill.take() {
                     self.shapes.insert(i, Shape::Polygon(pts, self.pose.color))
                 }

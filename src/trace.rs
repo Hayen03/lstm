@@ -5,9 +5,7 @@ use crate::err::{Error, Result, ensure};
 use clap::Args;
 use serde_json::{Value, json};
 use std::{
-    fs::File,
-    io::{self, Write},
-    path::PathBuf,
+    fs::File, io::{self, Write}, path::PathBuf, sync::Arc,
 };
 
 #[derive(Args, Default, Clone)]
@@ -54,7 +52,7 @@ pub struct Trace {
     sink: Option<std::sync::Arc<std::sync::Mutex<Box<dyn Write + Send>>>>,
     pub generation: i64,
     pub index: usize,
-    pub symbol: char,
+    pub symbol: Arc<str>,
     pub rule: Option<(usize, String)>,
 }
 impl Trace {
@@ -78,7 +76,7 @@ impl Trace {
             sink: sink.map(|out| std::sync::Arc::new(std::sync::Mutex::new(out))),
             generation: 0,
             index: 0,
-            symbol: ' ',
+            symbol: Arc::from(" "),
             rule: None,
         })
     }

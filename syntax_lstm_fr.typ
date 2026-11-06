@@ -141,6 +141,8 @@ ne demande aucune suite reproductible particulière.
 
 == Définition d’un symbole
 
+Un symbole est un seul cluster de grapheme Unicode étendu, comme une lettre avec des marques combinées ou une séquence d’emoji. Les symboles sont sensibles à la casse et comparés sans normalisation Unicode. Par conséquent, des formes visuellement identiques telles que `é` précomposé (U+00E9) et `e` suivi d’un accent aigu combiné (U+0065 U+0301) sont traitées comme des symboles différents.
+
 Chaque entrée de `symbols` est une chaîne décrivant un token et ses valeurs
 par défaut. Dans `symbols: ["A{x: 2}"]`, les occurrences `A` et `A{x: 5}`
 reçoivent respectivement 2 et 5. Un symbole sans déclaration reste utilisable

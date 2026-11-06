@@ -88,7 +88,7 @@ pub struct Model {
     pub width: u32,
     pub height: u32,
     axiom: Arc<[Template]>,
-    symbols: Arc<HashMap<char, Symbol>>,
+    symbols: Arc<HashMap<Arc<str>, Symbol>>,
     rules: Arc<[Rule]>,
     drawing: Vec<Rule>,
     engine: FormulaEngine,
@@ -147,7 +147,7 @@ impl Model {
         for declaration in s.symbols {
             let core = single(&declaration)?;
             ensure!(
-                !DRAW.contains(core.ch) && !"[]".contains(core.ch),
+                !DRAW.contains(core.ch.as_ref()) && !"[]".contains(core.ch.as_ref()),
                 SyntaxError::ReservedSymbol { symbol: core.ch }
             );
             symbols.insert(
@@ -200,7 +200,7 @@ impl Model {
             let token = word.lock().unwrap().get(at, &mut self.engine)?;
             let Some(token) = token else { break };
             tr.index = at;
-            tr.symbol = token.ch;
+            tr.symbol = token.ch.clone();
             tr.rule = None;
             let context = drawing_context(self.runtime.clone(), word.clone(), at);
             self.runtime.with_context(Some(context), || {
@@ -355,7 +355,7 @@ fn constraints(
 /// Resolves a template using symbol defaults, with explicit arguments overriding them.
 fn actualize(
     runtime: &Runtime,
-    symbols: &HashMap<char, Symbol>,
+    symbols: &HashMap<Arc<str>, Symbol>,
     engine: &mut FormulaEngine,
     t: &Template,
     env: &Env,
@@ -385,7 +385,7 @@ fn actualize(
         values.insert(k.clone(), v);
     }
     Ok(Token {
-        ch: t.ch,
+        ch: t.ch.clone(),
         args: values,
     })
 }
@@ -517,7 +517,7 @@ struct FrameWord {
     runtime: Runtime,
     prev: Arc<[Token]>,
     axiom: Option<Arc<[Template]>>,
-    symbols: Arc<HashMap<char, Symbol>>,
+    symbols: Arc<HashMap<Arc<str>, Symbol>>,
     rules: Arc<[Rule]>,
     trace: Trace,
     index: usize,
@@ -541,7 +541,7 @@ impl FrameWord {
                 return Ok(None);
             };
             self.trace.index = self.index;
-            self.trace.symbol = t.ch;
+            self.trace.symbol = t.ch.clone();
             self.index += 1;
             return actualize(
                 &self.runtime,
@@ -581,7 +581,7 @@ impl FrameWord {
             };
             self.runtime.token(self.index);
             self.trace.index = self.index;
-            self.trace.symbol = token.ch;
+            self.trace.symbol = token.ch.clone();
             self.trace.rule = None;
             self.index += 1;
             self.trace.event(
@@ -637,10 +637,10 @@ fn drawing_context(runtime: Runtime, word: Arc<Mutex<FrameWord>>, at: usize) -> 
                 let mut i = at + 1;
                 while let Some(token) = word.get(i, engine)? {
                     i += 1;
-                    match token.ch {
-                        '[' => depth += 1,
-                        ']' if depth == 0 => break,
-                        ']' => depth -= 1,
+                    match token.ch.as_ref() {
+                        "[" => depth += 1,
+                        "]" if depth == 0 => break,
+                        "]" => depth -= 1,
                         _ => (),
                     }
                 }
@@ -657,30 +657,30 @@ fn drawing_context(runtime: Runtime, word: Arc<Mutex<FrameWord>>, at: usize) -> 
 
 fn draw(
     runtime: &Runtime,
-    symbols: &HashMap<char, Symbol>,
+    symbols: &HashMap<Arc<str>, Symbol>,
     rules: &[Rule],
     engine: &mut FormulaEngine,
     token: &Token,
     d: &mut Dessin,
     tr: &mut Trace,
-    path: &mut Vec<char>,
+    path: &mut Vec<Arc<str>>,
 ) -> Result<()> {
     let Some(i) = select(runtime, rules, token, engine, tr, "drawing")? else {
-        if DRAW.contains(token.ch) || "[]".contains(token.ch) {
+        if DRAW.contains(token.ch.as_ref()) || "[]".contains(token.ch.as_ref()) {
             tr.event("drawing","instruction",||json!({"instruction":token.ch,"arguments":display(&V::Object(token.args.clone().into()))}))?;
             d.apply(token)?;
             runtime.sync(d);
         }
         return Ok(());
     };
-    path.push(token.ch);
+    path.push(token.ch.clone());
     ensure!(
         path.len() <= 128,
         Error::DrawingRecursion {
             limit: 128,
             path: path
                 .iter()
-                .map(char::to_string)
+                .map(|s| s.to_string())
                 .collect::<Vec<_>>()
                 .join(" -> "),
         }
@@ -690,7 +690,7 @@ fn draw(
     tr.event(
         "drawing",
         "symbol_expanded",
-        || json!({"drawing_path":path.iter().collect::<String>()}),
+        || json!({"drawing_path":path.iter().map(|s| s.to_string()).collect::<Vec<_>>()}),
     )?;
     for child in &rule.out {
         tr.rule = Some((i, rule.name.clone()));
@@ -758,10 +758,10 @@ mod tests {
                 .expect("invalid model")
         };
         assert!(matches!(load_error("{"), Error::Json5(_)));
-        assert!(matches!(
-            load_error("{axiom:'+'}"),
-            Error::Syntax(SyntaxError::ReservedSymbol { symbol: '+' })
-        ));
+        assert!(match load_error("{axiom:'+'}") {
+            Error::Syntax(SyntaxError::ReservedSymbol { symbol: s }) if s.as_ref() == "+" => true,
+            _ => false,
+        });
         assert!(matches!(
             load_error("{rules:[{from:'A',weight:-1}]}"),
             Error::InvalidRuleWeight { weight: -1.0 }
@@ -809,7 +809,7 @@ mod tests {
             1,
             false,
         )?;
-        assert_eq!(frames[1][1].ch, 'Z');
+        assert_eq!(frames[1][1].ch.as_ref(), "Z");
         assert_eq!(frames[1][1].args["x"], V::Int(3));
         Ok(())
     }
@@ -976,7 +976,7 @@ mod tests {
             ),
         ] {
             for (tokens, word) in generations(model, 3, true)?.iter().zip(words) {
-                assert_eq!(tokens.iter().map(|t| t.ch).collect::<String>(), word);
+                assert_eq!(tokens.iter().map(|t| t.ch.to_string()).collect::<String>(), word);
             }
         }
         Ok(())
@@ -1011,11 +1011,11 @@ mod tests {
         let iterations = Model::load(src, None, "", Some("1"))?.iterations;
         let frames = generations(src, iterations, true)?;
         // Exercise the falling-fruit rules that only become active after generation 16.
-        for stage in ['T', 'G', 'W'] {
+        for stage in ["T", "G", "W"] {
             assert!(
                 frames
                     .iter()
-                    .any(|frame| frame.iter().any(|t| t.ch == stage)),
+                    .any(|frame| frame.iter().any(|t| t.ch.as_ref() == stage)),
                 "orchard never reached stage {stage}"
             );
         }

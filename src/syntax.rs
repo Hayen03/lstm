@@ -6,6 +6,7 @@ use crate::err::{Result, SyntaxError, ensure};
 use formulas::{EvalValue as V, parse_next};
 use indexmap::IndexMap;
 use std::sync::Arc;
+use unicode_segmentation::UnicodeSegmentation;
 
 // Preserve declaration order: evaluating arguments may consume randomness or marks.
 pub type Values = IndexMap<Arc<str>, V>;
@@ -15,13 +16,13 @@ pub const META: &str = "+.-*^$|?><";
 #[derive(Clone, Debug)]
 /// A symbol with unevaluated argument expressions, as written in a model.
 pub struct Template {
-    pub ch: char,
+    pub ch: Arc<str>,
     pub args: Args,
 }
 #[derive(Clone, Debug)]
 /// A symbol in a generation, with its arguments already resolved to values.
 pub struct Token {
-    pub ch: char,
+    pub ch: Arc<str>,
     pub args: Values,
 }
 impl Token {
@@ -94,13 +95,13 @@ pub fn args(mut s: &str) -> Result<Args> {
 }
 /// Consumes one symbol and its optional argument block, leaving the suffix.
 pub fn atom(s: &str) -> Result<(Template, &str)> {
-    let ch = s.chars().next().ok_or(SyntaxError::MissingSymbol)?;
-    let rest = &s[ch.len_utf8()..];
+    let ch = s.graphemes(true).next().ok_or(SyntaxError::MissingSymbol)?;
+    let rest = &s[ch.len()..];
     if rest.starts_with('{') {
         let end = block(rest)?;
         Ok((
             Template {
-                ch,
+                ch: Arc::from(ch),
                 args: args(&rest[1..end - 1])?,
             },
             &rest[end..],
@@ -108,7 +109,7 @@ pub fn atom(s: &str) -> Result<(Template, &str)> {
     } else {
         Ok((
             Template {
-                ch,
+                ch: Arc::from(ch),
                 args: Args::new(),
             },
             rest,
@@ -121,8 +122,8 @@ pub fn word(mut s: &str) -> Result<Vec<Template>> {
     while !s.trim_start().is_empty() {
         let (t, rest) = atom(s.trim_start())?;
         ensure!(
-            !META.contains(t.ch) && !r#"{}:,"'"#.contains(t.ch),
-            SyntaxError::ReservedSymbol { symbol: t.ch }
+            !META.contains(t.ch.as_ref()) && !r#"{}:,"'"#.contains(t.ch.as_ref()),
+            SyntaxError::ReservedSymbol { symbol: t.ch.clone() }
         );
         out.push(t);
         s = rest;

@@ -6,6 +6,8 @@ use crate::err::{Result, SyntaxError, ensure};
 use crate::syntax::*;
 use formulas::EvalValue as V;
 use std::collections::BTreeSet;
+use std::sync::Arc;
+use unicode_segmentation::UnicodeSegmentation;
 
 #[derive(Default)]
 struct Node {
@@ -29,9 +31,9 @@ impl Tree {
             let mut stack = 0;
             let mut chain = Vec::new();
             for i in (0..at).rev() {
-                match seq[i].ch {
-                    ']' => stack += 1,
-                    '[' => stack = (stack - 1).max(0),
+                match seq[i].ch.as_ref() {
+                    "]" => stack += 1,
+                    "[" => stack = (stack - 1).max(0),
                     c if stack == 0 && !DRAW.contains(c) => chain.push(i),
                     _ => (),
                 }
@@ -44,12 +46,12 @@ impl Tree {
             // ends this neighborhood instead of continuing into the parent's tail.
             let mut stack = Vec::new();
             for (i, t) in seq.iter().enumerate().skip(at + 1) {
-                match t.ch {
-                    '[' => {
+                match t.ch.as_ref() {
+                    "[" => {
                         stack.push(cur);
                         cur = tree.add(cur, None)
                     }
-                    ']' => {
+                    "]" => {
                         // Preserve an empty continuation when a segment ends at a fork.
                         if !tree.nodes[cur].children.is_empty() {
                             tree.add(cur, None);
@@ -164,7 +166,7 @@ impl Tree {
 /// A small regular-expression grammar over symbols and argument constraints.
 pub enum Pattern {
     Atom(Template),
-    Anchor(char),
+    Anchor(Arc<str>),
     Seq(Vec<Self>),
     Alt(Vec<Self>),
     Repeat(Box<Self>, usize, Option<usize>),
@@ -207,7 +209,7 @@ impl Pattern {
                     return Ok(v);
                 }
                 let t = &seq[idx];
-                let v = (atom.ch == '.' || t.ch == atom.ch) && check(atom, t)?;
+                let v = (atom.ch.as_ref() == "." || t.ch == atom.ch) && check(atom, t)?;
                 cache.insert(key, v);
                 Ok(v)
             })?;
@@ -236,7 +238,7 @@ impl Pattern {
             }
             Self::Anchor(c) => {
                 for p in start {
-                    if (left && *c == '^' && p == 0) || (!left && *c == '$' && p == n) {
+                    if (left && c.as_ref() == "^" && p == 0) || (!left && c.as_ref() == "$" && p == n) {
                         result.insert(p);
                     }
                 }
@@ -284,13 +286,13 @@ impl Pattern {
 }
 struct Parser<'a>(&'a str);
 impl Parser<'_> {
-    fn peek(&mut self) -> Option<char> {
+    fn peek(&mut self) -> Option<&str> {
         self.0 = self.0.trim_start();
-        self.0.chars().next()
+        self.0.graphemes(true).next()
     }
-    fn pop(&mut self) -> Option<char> {
-        let c = self.peek()?;
-        self.0 = &self.0[c.len_utf8()..];
+    fn pop(&mut self) -> Option<Arc<str>> {
+        let c: Arc<str> = self.peek()?.into();
+        self.0 = &self.0[c.len()..];
         Some(c)
     }
     fn int(&mut self) -> Result<usize> {
@@ -314,56 +316,58 @@ impl Parser<'_> {
         loop {
             let mut parts = Vec::new();
             while let Some(c) = self.peek() {
-                if c == '|' || c == ')' {
+                if c == "|" || c == ")" {
                     break;
                 }
-                let mut p = match c {
-                    '(' => {
+                let c: Arc<str> = Arc::from(c);
+                let mut p = match c.as_ref() {
+                    "(" => {
                         self.pop();
                         let p = self.alt(depth + 1)?;
                         ensure!(
-                            self.pop() == Some(')'),
+                            self.pop() == Some(")".into()),
                             SyntaxError::MissingClosingParenthesis
                         );
                         p
                     }
-                    '^' | '$' => {
+                    "^" | "$" => {
                         self.pop();
-                        Pattern::Anchor(c)
+                        Pattern::Anchor(c.into())
                     }
                     _ => {
                         ensure!(
-                            c == '.'
-                                || (!META.contains(c)
-                                    && !DRAW.contains(c)
-                                    && !"[]{}:,\"'".contains(c)),
-                            SyntaxError::InvalidContextAtom { symbol: c }
+                            c.as_ref() == "."
+                                || (!META.contains(c.as_ref())
+                                    && !DRAW.contains(c.as_ref())
+                                    && !"[]{}:,\"'".contains(c.as_ref())),
+                            SyntaxError::InvalidContextAtom { symbol: c.into() }
                         );
                         let (t, rest) = atom(self.0)?;
                         self.0 = rest;
                         Pattern::Atom(t)
                     }
                 };
-                if let Some(q @ ('*' | '+' | '?' | '[')) = self.peek() {
+                let peek = self.peek().map(|s| Arc::<str>::from(s));
+                if let Some(q @ ("*" | "+" | "?" | "[")) = peek.as_deref() {
                     ensure!(
                         !matches!(p, Pattern::Anchor(_)),
                         SyntaxError::RepeatedAnchor
                     );
                     self.pop();
                     let (lo, hi) = match q {
-                        '*' => (0, None),
-                        '+' => (1, None),
-                        '?' => (0, Some(1)),
+                        "*" => (0, None),
+                        "+" => (1, None),
+                        "?" => (0, Some(1)),
                         _ => {
                             let lo = self.int()?;
-                            let hi = if self.peek() == Some(',') {
+                            let hi = if self.peek() == Some(",") {
                                 self.pop();
                                 self.int()?
                             } else {
                                 lo
                             };
                             ensure!(
-                                lo <= hi && hi <= 10000 && self.pop() == Some(']'),
+                                lo <= hi && hi <= 10000 && self.pop() == Some("]".into()),
                                 SyntaxError::InvalidRepetitionBounds
                             );
                             (lo, Some(hi))
@@ -374,7 +378,7 @@ impl Parser<'_> {
                 parts.push(p)
             }
             branches.push(Pattern::Seq(parts));
-            if self.peek() != Some('|') {
+            if self.peek() != Some("|") {
                 break;
             }
             self.pop();
@@ -389,25 +393,25 @@ pub fn predecessor(s: &str) -> Result<(Option<&str>, Template, Option<&str>)> {
     let mut end = s.len();
     let mut left = None;
     let mut right = None;
-    while let Some(c) = rest.chars().next() {
+    while let Some(c) = rest.graphemes(true).next() {
         let i = s.len() - rest.len();
         match c {
-            '{' => {
+            "{" => {
                 rest = &rest[block(rest)?..];
                 continue;
             }
-            '<' if left.is_none() && right.is_none() => {
+            "<" if left.is_none() && right.is_none() => {
                 left = Some(&s[..i]);
                 start = i + 1
             }
-            '>' if right.is_none() => {
+            ">" if right.is_none() => {
                 end = i;
                 right = Some(&s[i + 1..])
             }
-            '<' | '>' => return Err(SyntaxError::InvalidPredecessor { input: s.into() }.into()),
+            "<" | ">" => return Err(SyntaxError::InvalidPredecessor { input: s.into() }.into()),
             _ => (),
         }
-        rest = &rest[c.len_utf8()..];
+        rest = &rest[c.len()..];
     }
     Ok((
         left,

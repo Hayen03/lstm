@@ -181,12 +181,14 @@ impl Drop for ContextScope<'_> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use unicode_segmentation::UnicodeSegmentation;
+
+use super::*;
 
     fn tokens(s: &str) -> Arc<[Token]> {
-        s.chars()
+        s.graphemes(true)
             .map(|ch| Token {
-                ch,
+                ch: Arc::from(ch),
                 args: Default::default(),
             })
             .collect()

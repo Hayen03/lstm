@@ -139,6 +139,8 @@ request any particular reproducible sequence.
 
 == Defining a symbol
 
+A symbol is a single Unicode extended grapheme cluster, such as a letter with combining marks or an emoji sequence. Symbols are case-sensitive and compared without Unicode normalization. Consequently, visually identical forms such as precomposed `é` (U+00E9) and `e` followed by a combining acute accent (U+0065 U+0301) are treated as different symbols.
+
 Each entry in `symbols` is a string describing a token and its default values.
 With `symbols: ["A{x: 2}"]`, the occurrences `A` and `A{x: 5}` receive 2 and 5
 respectively. An undeclared symbol remains usable and has no default arguments.

@@ -6,6 +6,7 @@ use std::{
     fmt,
     num::{ParseIntError, TryFromIntError},
     path::PathBuf,
+    sync::Arc,
 };
 
 /// Result returned by model loading, interpretation, drawing, and CLI operations.
@@ -27,7 +28,7 @@ pub enum SyntaxError {
     ExpectedComma,
     MissingSymbol,
     ReservedSymbol {
-        symbol: char,
+        symbol: Arc<str>,
     },
     ExpectedSingleSymbol {
         input: String,
@@ -40,7 +41,7 @@ pub enum SyntaxError {
     },
     MissingClosingParenthesis,
     InvalidContextAtom {
-        symbol: char,
+        symbol: Arc<str>,
     },
     RepeatedAnchor,
     InvalidRepetitionBounds,
@@ -347,11 +348,11 @@ mod tests {
 
     #[test]
     fn syntax_diagnostics_do_not_repeat_the_cause() {
-        let error = Error::from(SyntaxError::ReservedSymbol { symbol: '+' }).context("axiom");
-        assert!(matches!(
-            error.without_context(),
-            Error::Syntax(SyntaxError::ReservedSymbol { symbol: '+' })
-        ));
+        let error = Error::from(SyntaxError::ReservedSymbol { symbol: Arc::from("+") }).context("axiom");
+        assert!(match error.without_context() {
+            Error::Syntax(SyntaxError::ReservedSymbol { symbol: s }) if s.as_ref() == "+" => true,
+            _ => false,
+        });
         assert_eq!(
             format!("{error:#}"),
             "axiom: Invalid L-system syntax: Reserved symbol +"
