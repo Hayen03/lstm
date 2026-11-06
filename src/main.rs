@@ -144,6 +144,11 @@ fn run(c: Cli) -> Result<()> {
     // Encode beside the destination and publish only after successful completion.
     // Keeping both files on the same filesystem allows persist() to rename it.
     let mut tmp = if let Some(out) = &c.output {
+        std::fs::create_dir_all(
+            out.parent()
+                .filter(|p| !p.as_os_str().is_empty())
+                .unwrap_or(Path::new(".")),
+        )?;
         Some(NamedTempFile::new_in(
             out.parent()
                 .filter(|p| !p.as_os_str().is_empty())
