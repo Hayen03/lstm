@@ -12,7 +12,7 @@ use unicode_segmentation::UnicodeSegmentation;
 // Preserve declaration order: evaluating arguments may consume randomness or marks.
 pub type Values = IndexMap<Arc<str>, V>;
 pub type Args = IndexMap<Arc<str>, String>;
-pub const DRAW: &str = "FRL()MCPDH";
+pub const DRAW: &str = "FRL()MCWPDH";
 pub const META: &str = "+.-*^$|?><";
 #[derive(Clone, Debug)]
 /// A symbol with unevaluated argument expressions, as written in a model.

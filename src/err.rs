@@ -145,6 +145,11 @@ pub enum Error {
         input: String,
         source: Option<ParseIntError>,
     },
+    InvalidArgument {
+        field: String,
+        expected: String,
+        got: EvalValue,
+    },
     Context {
         message: String,
         source: Box<Error>,
@@ -220,6 +225,9 @@ impl fmt::Display for Error {
             }
             Self::UnboundedIteration => {
                 f.write_str("Unbounded iteration requires live animation")?
+            }
+            Self::InvalidArgument { field, expected, got } => {
+                write!(f, "Invalid argument for {field}: expected {expected}, got {} (type {})", got.repr(), got.type_name())?
             }
             Self::GenerationOverflow => f.write_str("Generation overflow")?,
             Self::InvalidTraceRange { input, .. } => write!(
@@ -299,6 +307,7 @@ macro_rules! ensure {
     }};
 }
 pub(crate) use ensure;
+use formulas::EvalValue;
 
 #[cfg(test)]
 mod tests {

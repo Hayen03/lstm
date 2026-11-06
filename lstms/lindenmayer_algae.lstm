@@ -21,7 +21,7 @@
     "S",
     "A",
     "B",
-    "W{c: type_a}"
+    "w{c: type_a}"
   ],
   "drawing": [
     {
@@ -30,14 +30,14 @@
     },
     {
       "from": "A",
-      "to": "W{c: type_a}"
+      "to": "w{c: type_a}"
     },
     {
       "from": "B",
-      "to": "W{c: type_b}"
+      "to": "w{c: type_b}"
     },
     {
-      "from": "W",
+      "from": "w",
       "to": "[C{color: wall}F{length: (cell_size+gap)*scale,width: 0.5*scale}][C{color: wall}(R{deg: 80.6548450}F{length: 0.1049201*cell_size*scale,width: 0.4*scale}R{deg: -18.0284729}F{length: 0.1086368*cell_size*scale,width: 0.4*scale}R{deg: -16.4321385}F{length: 0.1147898*cell_size*scale,width: 0.4*scale}R{deg: -14.6500681}F{length: 0.1215077*cell_size*scale,width: 0.4*scale}R{deg: -13.2104740}F{length: 0.1270389*cell_size*scale,width: 0.4*scale}R{deg: -12.3213512}F{length: 0.1301253*cell_size*scale,width: 0.4*scale}R{deg: -12.0246806}F{length: 0.1301253*cell_size*scale,width: 0.4*scale}R{deg: -12.3213512}F{length: 0.1270389*cell_size*scale,width: 0.4*scale}R{deg: -13.2104740}F{length: 0.1215077*cell_size*scale,width: 0.4*scale}R{deg: -14.6500681}F{length: 0.1147898*cell_size*scale,width: 0.4*scale}R{deg: -16.4321385}F{length: 0.1086368*cell_size*scale,width: 0.4*scale}R{deg: -18.0284729}F{length: 0.1049201*cell_size*scale,width: 0.4*scale}R{deg: -18.6903100}F{length: 0.1049201*cell_size*scale,width: 0.4*scale}R{deg: -18.0284729}F{length: 0.1086368*cell_size*scale,width: 0.4*scale}R{deg: -16.4321385}F{length: 0.1147898*cell_size*scale,width: 0.4*scale}R{deg: -14.6500681}F{length: 0.1215077*cell_size*scale,width: 0.4*scale}R{deg: -13.2104740}F{length: 0.1270389*cell_size*scale,width: 0.4*scale}R{deg: -12.3213512}F{length: 0.1301253*cell_size*scale,width: 0.4*scale}R{deg: -12.0246806}F{length: 0.1301253*cell_size*scale,width: 0.4*scale}R{deg: -12.3213512}F{length: 0.1270389*cell_size*scale,width: 0.4*scale}R{deg: -13.2104740}F{length: 0.1215077*cell_size*scale,width: 0.4*scale}R{deg: -14.6500681}F{length: 0.1147898*cell_size*scale,width: 0.4*scale}R{deg: -16.4321385}F{length: 0.1086368*cell_size*scale,width: 0.4*scale}R{deg: -18.0284729}F{length: 0.1049201*cell_size*scale,width: 0.4*scale})][M{length: cell_size*0.10*scale}[C{color: c}(R{deg: 80.6548450}F{length: 0.1049201*cell_size*0.8*scale,width: 0.4*scale}R{deg: -18.0284729}F{length: 0.1086368*cell_size*0.8*scale,width: 0.4*scale}R{deg: -16.4321385}F{length: 0.1147898*cell_size*0.8*scale,width: 0.4*scale}R{deg: -14.6500681}F{length: 0.1215077*cell_size*0.8*scale,width: 0.4*scale}R{deg: -13.2104740}F{length: 0.1270389*cell_size*0.8*scale,width: 0.4*scale}R{deg: -12.3213512}F{length: 0.1301253*cell_size*0.8*scale,width: 0.4*scale}R{deg: -12.0246806}F{length: 0.1301253*cell_size*0.8*scale,width: 0.4*scale}R{deg: -12.3213512}F{length: 0.1270389*cell_size*0.8*scale,width: 0.4*scale}R{deg: -13.2104740}F{length: 0.1215077*cell_size*0.8*scale,width: 0.4*scale}R{deg: -14.6500681}F{length: 0.1147898*cell_size*0.8*scale,width: 0.4*scale}R{deg: -16.4321385}F{length: 0.1086368*cell_size*0.8*scale,width: 0.4*scale}R{deg: -18.0284729}F{length: 0.1049201*cell_size*0.8*scale,width: 0.4*scale}R{deg: -18.6903100}F{length: 0.1049201*cell_size*0.8*scale,width: 0.4*scale}R{deg: -18.0284729}F{length: 0.1086368*cell_size*0.8*scale,width: 0.4*scale}R{deg: -16.4321385}F{length: 0.1147898*cell_size*0.8*scale,width: 0.4*scale}R{deg: -14.6500681}F{length: 0.1215077*cell_size*0.8*scale,width: 0.4*scale}R{deg: -13.2104740}F{length: 0.1270389*cell_size*0.8*scale,width: 0.4*scale}R{deg: -12.3213512}F{length: 0.1301253*cell_size*0.8*scale,width: 0.4*scale}R{deg: -12.0246806}F{length: 0.1301253*cell_size*0.8*scale,width: 0.4*scale}R{deg: -12.3213512}F{length: 0.1270389*cell_size*0.8*scale,width: 0.4*scale}R{deg: -13.2104740}F{length: 0.1215077*cell_size*0.8*scale,width: 0.4*scale}R{deg: -14.6500681}F{length: 0.1147898*cell_size*0.8*scale,width: 0.4*scale}R{deg: -16.4321385}F{length: 0.1086368*cell_size*0.8*scale,width: 0.4*scale}R{deg: -18.0284729}F{length: 0.1049201*cell_size*0.8*scale,width: 0.4*scale})]][M{length: cell_size*0.5*scale}C{color: nucleus}M{length: -cell_size*0.13*scale}L{size: cell_size*0.13*scale}]M{length: (cell_size+gap)*scale}"
     }
   ],

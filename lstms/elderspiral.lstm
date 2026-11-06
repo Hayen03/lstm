@@ -40,7 +40,7 @@
     "T{x:0,y:0,v:0.5,vx:0}",
     "G{x:0,a:0}",
     "J{x:0,y:0,v:0.7,vx:0,h:0,s:16,a:0}",
-    "W{x:0,s:16,h:0,a:0}",
+    "w{x:0,s:16,h:0,a:0}",
     "I{a:0,s:16,q:0,born:0}",
     "Y{d:0,q:0,p:0}",
     "a{n:0,l:1,w:1,bend:0,tw:0,dead:0}",
@@ -102,7 +102,7 @@
       "to": "[P{x:x,y:y}H{rot:h}p{s:s,c:#C39045}]"
     },
     {
-      "from": "W",
+      "from": "w",
       "to": "[P{x:x,y:ground+1}H{rot:h}p{s:max(0.3,s*(1-a/(year*0.12))),c:#8F713F}]"
     },
     {
@@ -312,18 +312,18 @@
     {
       "name": "Leaf lands",
       "from": "J",
-      "to": "W{x:x,s:s,h:h}",
+      "to": "w{x:x,s:s,h:h}",
       "cond": "y<=ground+1"
     },
     {
       "name": "Leaf litter fades",
-      "from": "W",
-      "to": "W{x:x,s:s,h:h,a:a+1}",
+      "from": "w",
+      "to": "w{x:x,s:s,h:h,a:a+1}",
       "cond": "a<year*0.12"
     },
     {
       "name": "Leaf litter disappears",
-      "from": "W",
+      "from": "w",
       "to": "",
       "cond": "a>=year*0.12"
     },

@@ -4,7 +4,7 @@
 - [ ] Custom `.lstm` file format to become independent from json5 (old json5 files will still be supported)
 - [ ] Dynamic growing and drawing rules that allow splicing the `to` field with `${...}` formulas that evaluates to a list of tokens `[{symbol: str, args: dict}...]`
 - [ ] Change the origin to be at the bottom-center of the canvas (or a bit above)
-- [ ] Rajouter les arguments `color` au symboles `F`, `D` et `L`, qui indique la couleur de dessin pour cette instruction sans changer la couleur de base du crayon.
+- [x] Rajouter les arguments `color` au symboles `F`, `D` et `L`, qui indique la couleur de dessin pour cette instruction sans changer la couleur de base du crayon.
 - [ ] Add a `W` instruction that changes the defualt width of the brush? Also `width()` and `color()` to formulas to allow access to the width and color of the brush.
 
 # Future

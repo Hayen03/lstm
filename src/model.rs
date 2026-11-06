@@ -725,7 +725,7 @@ mod tests {
         for g in 0..=n {
             seq = model.frame(seq, g, &mut turtle, &mut trace, true)?;
         }
-        Ok(turtle.pose().0.0)
+        Ok(turtle.pose().p.0)
     }
 
     #[test]
@@ -1055,7 +1055,7 @@ mod tests {
         let iterations = Model::load(src, None, "", Some("1"))?.iterations;
         let frames = generations(src, iterations, true)?;
         // Exercise the falling-fruit rules that only become active after generation 16.
-        for stage in ["T", "G", "W"] {
+        for stage in ["T", "G", "w"] {
             assert!(
                 frames
                     .iter()

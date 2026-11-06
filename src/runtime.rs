@@ -3,12 +3,14 @@
 
 use crate::{context::Tree, dessin::Dessin, syntax::Token};
 use formulas::{Env, Error, EvalValue as V, FormulaEngine, Function, Result};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, LazyLock, Mutex};
 
 #[derive(Default)]
 struct Live {
     pos: (f64, f64),
     heading: f64,
+    color: u32,
+    width: f64,
     size: (u32, u32),
     generation: i64,
     // Marks are double-buffered: reads see the completed previous generation.
@@ -41,8 +43,11 @@ impl Runtime {
     }
     pub fn sync(&self, d: &Dessin) {
         let mut s = self.live.lock().unwrap();
-        (s.pos, s.heading) = d.pose();
+        let pose = d.pose();
+        (s.pos, s.heading) = (pose.p, pose.heading);
         s.size = (d.width, d.height);
+        s.color = pose.color;
+        s.width = pose.width;
     }
     /// Starts a generation, publishing collected marks and replacing the context word.
     pub fn generation(&self, n: i64, seq: Arc<[Token]>) {
@@ -144,6 +149,8 @@ impl Runtime {
             "heading" => V::Float(s.heading),
             "gen" => V::Int(s.generation),
             "screen" => V::Array(vec![V::Int(s.size.0.into()), V::Int(s.size.1.into())].into()),
+            "width" => V::Float(s.width),
+            "color" => V::Int(s.color.into()),
             _ => unreachable!(),
         })
     }
@@ -151,7 +158,7 @@ impl Runtime {
     pub fn environment(&self) -> Env<'static> {
         let mut env = formulas::builtins::GLOBAL_ENV.clone();
         for name in [
-            "pos", "heading", "gen", "screen", "mark", "marked", "lctx", "rctx",
+            "pos", "heading", "gen", "screen", "mark", "marked", "lctx", "rctx", "width", "color",
         ] {
             let runtime = self.clone();
             env.insert(
@@ -162,6 +169,8 @@ impl Runtime {
                 ))),
             );
         }
+        env.insert("hex", ENV_HEX.clone());
+        env.insert("rgb", ENV_RGB.clone());
         env
     }
 }
@@ -178,6 +187,67 @@ impl Drop for ContextScope<'_> {
         s.queries = std::mem::take(&mut self.queries);
     }
 }
+
+fn env_hex(arguments: &[V], _formulas: &mut FormulaEngine, _env: &Env) -> Result<V> {
+    if arguments.len() != 3 {
+        return Err(Error::Arity { function: "hex".into(), expected: formulas::err::ArgumentCount::Exactly(3), actual: arguments.len() });
+    }
+    let r = match &arguments[0] {
+        V::Int(1) | V::Bool(true) => 0xFFu32,
+        V::Int(0) | V::Bool(false) => 0x00u32,
+        V::Float(f) => {
+            if !f.is_finite() {
+                return Err(Error::Type(format!("r: Expected a finite number between 0 and 1, got {}", f).into()));
+            }
+            (f.clamp(0.0, 1.0) * 255.0).round() as u32
+        },
+        other => return Err(Error::Type(format!("r: Expected a number between 0 and 1, got {}", other.type_name()).into())),
+    };
+    let g = match &arguments[1] {
+        V::Int(1) | V::Bool(true) => 0xFFu32,
+        V::Int(0) | V::Bool(false) => 0x00u32,
+        V::Float(f) => {
+            if !f.is_finite() {
+                return Err(Error::Type(format!("g: Expected a finite number between 0 and 1, got {}", f).into()));
+            }
+            (f.clamp(0.0, 1.0) * 255.0).round() as u32
+        },
+        other => return Err(Error::Type(format!("g: Expected a number between 0 and 1, got {}", other.type_name()).into())),
+    };
+    let b = match &arguments[2] {
+        V::Int(1) | V::Bool(true) => 0xFFu32,
+        V::Int(0) | V::Bool(false) => 0x00u32,
+        V::Float(f) => {
+            if !f.is_finite() {
+                return Err(Error::Type(format!("b: Expected a finite number between 0 and 1, got {}", f).into()));
+            }
+            (f.clamp(0.0, 1.0) * 255.0).round() as u32
+        },
+        other => return Err(Error::Type(format!("b: Expected a number between 0 and 1, got {}", other.type_name()).into())),
+    };
+    Ok(V::Int(((r << 16) | (g << 8) | b) as i64))
+}
+fn env_rgb(arguments: &[V], _formulas: &mut FormulaEngine, _env: &Env) -> Result<V> {
+    if arguments.len() != 1 {
+        return Err(Error::Arity { function: "rgb".into(), expected: formulas::err::ArgumentCount::Exactly(1), actual: arguments.len() });
+    }
+    let i = match &arguments[0] {
+        V::Int(i) => {
+            if (0..=0xFFFFFF).contains(i) { 
+                *i as u32 
+            } else { 
+                return Err(Error::Type(format!("rgb: Expected an integer color between 0 and 0xFFFFFF, got {}", i).into())) 
+            } 
+        },
+        other => return Err(Error::Type(format!("rgb: Expected an integer color, got {}", other.type_name()).into())),
+    };
+    let r = ((i >> 16) & 0xFF) as f64 / 255.0;
+    let g = ((i >> 8) & 0xFF) as f64 / 255.0;
+    let b = (i & 0xFF) as f64 / 255.0;
+    Ok(V::Array(Arc::from(vec![V::Float(r), V::Float(g), V::Float(b)])))
+}
+static ENV_HEX: LazyLock<V> = LazyLock::new(|| V::Func(Arc::new(formulas::Function::Builtin(Arc::from("hex"), Arc::new(env_hex)))));
+static ENV_RGB: LazyLock<V> = LazyLock::new(|| V::Func(Arc::new(formulas::Function::Builtin(Arc::from("rgb"), Arc::new(env_rgb)))));
 
 #[cfg(test)]
 mod tests {

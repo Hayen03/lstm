@@ -513,13 +513,14 @@ These symbols cannot be defined in `symbols` and are reserved for drawing primit
 #table(
   columns: (auto, auto, 1fr),
   table.header([Token], [Default parameters], [Effect]),
-  [`F`], [`length: 1`, `width: 1`], [Move forward while drawing a stroke of width `width`. A negative length moves backward.],
+  [`F`], [`length: 1`, `width`, `color`], [Move forward while drawing a stroke of width `width` (if ommited, the current stroke width is used). A negative length moves backward. If `color` is omitted, the current stroke color is used.],
   [`C`], [`color: 0`], [Set the stroke and fill color from an RGB integer.],
+  [`W`], [`width: 1`], [Set the stroke width for subsequent drawing commands.],
   [`R`], [`deg: 0`], [Turn clockwise; a negative value turns counterclockwise.],
-  [`L`], [`size: 1`], [Draw a disk of radius `size` (diameter `2 * size`), centered `size` units ahead of the current position, without changing the turtle's position.],
+  [`L`], [`size: 1`, `color`], [Draw a disk of radius `size` (diameter `2 * size`), centered `size` units ahead of the current position, without changing the turtle's position. If `color` is omitted, the current stroke color is used.],
   [`M`], [`length: 1`], [Move forward without drawing. A negative length moves backward.],
   [`P`], [`x, y`], [Move the turtle to position `(x, y)` without drawing. If `x` or `y` is omitted, the corresponding coordinate remains unchanged.],
-  [`D`], [`x, y, width: 1`], [Move the turtle to absolute coordinates `(x, y)` while drawing a stroke of width `width`. If `x` or `y` is omitted, the corresponding coordinate remains unchanged.],
+  [`D`], [`x, y, width`, `color`], [Move the turtle to absolute coordinates `(x, y)` while drawing a stroke of width `width` (if omitted, the current stroke width is used). If `x` or `y` is omitted, the corresponding coordinate remains unchanged. If `color` is omitted, the current stroke color is used.],
   [`H`], [`rot`], [Turn the turtle to heading `rot`. If `rot` is omitted, the heading remains unchanged.],
   [`(`], [none], [Begin a fill.],
   [`)`], [none], [End a fill.],
@@ -544,8 +545,15 @@ may overlap.
 is a valid word.
 
 At the start of each frame, the previous drawing is cleared; the turtle is
-placed at the bottom center of the canvas, facing upward. Color is preserved
-between frames; stroke width is defined by each command.
+placed at the bottom center of the canvas, facing upward. Color is reset to black; stroke width is reset to 1.
+
+== States and `[]`
+
+The square brackets `[` and `]` are used to save and restore the turtle's state.
+Everything between a matching pair of brackets is drawn relative to the saved state.
+This allows for branching structures and repeated patterns without manually resetting the turtle's position, heading, or color.
+
+The state save contains the position, heading, color, and stroke width of the turtle at the point where the `[` symbol appears.
 
 == Disks, leaves, and flowers
 
@@ -587,6 +595,10 @@ and drawing from within formulas.
 / `marked()`: Returns the list of values recorded by `mark` during the previous iteration.
 / `gen()`: Returns the model's current generation number; the axiom corresponds to generation 0.
 / `screen()`: Returns the canvas dimensions as `[width, height]`, two integers in pixels.
+/ `width()`: Returns the current stroke width as a `float`.
+/ `color()`: Returns the current stroke color as an integer.
+/ `hex(r, g, b)`: Returns the integer representation of the color with red, green, and blue components `r`, `g`, and `b` (each `float` in the range 0.0-1.0).
+/ `rgb(i)`: Returns the red, green, and blue components of the color integer `i` as `[r, g, b]`, each a `float` in the range 0.0-1.0.
 
 These functions describe the drawing state during the evaluation of a
 generation, independently of whether the image is displayed or saved.

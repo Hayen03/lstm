@@ -502,13 +502,14 @@ Ces symboles sont indisponibles pour les définitions dans `symbols` et sont ré
 #table(
   columns: (auto, auto, 1fr),
   table.header([Token], [Paramètres par défaut], [Effet]),
-  [`F`], [`length: 1`, `width: 1`], [Avancer en traçant un trait d’épaisseur `width`. Une longueur négative recule.],
+  [`F`], [`length: 1`, `width`, `color`], [Avancer en traçant un trait d’épaisseur `width` (si `width` est omis, la taille du pinceau est utilisée). Une longueur négative recule. Si `color` est omis, la couleur courante est utilisée.],
   [`C`], [`color: 0`], [Fixer la couleur du trait et du remplissage à partir d’un entier RGB.],
+  [`W`], [`width: 1`], [Change la taille du pinceau pour `width` pixels. ],
   [`R`], [`deg: 0`], [Tourner dans le sens horaire ; une valeur négative tourne dans le sens antihoraire.],
-  [`L`], [`size: 1`], [Tracer un disque de rayon `size` (diamètre `2 * size`), centré à `size` unités devant la position courante, sans modifier la position de la tortue.],
+  [`L`], [`size: 1`, `color`], [Tracer un disque de rayon `size` (diamètre `2 * size`), centré à `size` unités devant la position courante, sans modifier la position de la tortue. Si `color` est omis, la couleur courante est utilisée.],
   [`M`], [`length: 1`], [Avancer sans tracer. Une longueur négative recule.],
   [`P`], [`x, y`], [Placer la tortue à la position `(x, y)` sans tracer. Si `x` ou `y` est omis, la coordonnée correspondante reste inchangée.],
-  [`D`], [`x, y, width: 1`], [Placer la tortue aux coordonnées absolues `(x, y)` en traçant avec un trait de largeur `width`. Si `x` ou `y` est omis, la coordonnée correspondante reste inchangée.],
+  [`D`], [`x, y, width`, `color`], [Placer la tortue aux coordonnées absolues `(x, y)` en traçant avec un trait de largeur `width` (si `width` est omis, la taille du pinceau est utilisée). Si `color` est omis, la couleur courante est utilisée. Si `x` ou `y` est omis, la coordonnée correspondante reste inchangée.],
   [`H`], [`rot`], [Tourner la tortue à l’orientation `rot`. Si `rot` est omis, l’orientation reste inchangée.],
   [`(`], [aucun], [Commencer un remplissage],
   [`)`], [aucun], [Terminer un remplissage],
@@ -534,7 +535,15 @@ est un mot valide.
 
 Au début de chaque image, le dessin précédent est effacé ; la tortue est
 placée au centre inférieur du canevas, orientée vers le haut. La couleur
-est conservée entre les images ; l’épaisseur est définie par chaque commande.
+est réinitialisée à noir entre les images ; l’épaisseur est redéfinie à 1.
+
+== États et `[]`
+
+Les crochets `[` et `]` sont utilisés pour sauvegarder et restaurer l’état de la tortue.
+Tout ce qui se trouve entre une paire de crochets correspondante est dessiné par rapport à l’état sauvegardé.
+Cela permet de créer des structures ramifiées et des motifs répétés sans réinitialiser manuellement la position, l’orientation ou la couleur de la tortue.
+
+L’état sauvegardé contient la position, l’orientation, la couleur et l’épaisseur du trait de la tortue au moment où le symbole `[` apparaît.
 
 == Disques, feuilles et fleurs
 
@@ -575,6 +584,10 @@ Les fonctions suivantes donnent accès à l’état du modèle, à son contexte 
 / `marked()` : Retourne la liste des valeurs enregistrées par `mark` lors de l'itération précédente.
 / `gen()`: Retourne le numéro de la génération actuelle du modèle ; l’axiome correspond à la génération 0.
 / `screen()`: Retourne les dimensions du canevas sous la forme `[largeur, hauteur]`, deux entiers en pixels.
+/ `width()`: Retourne la taille actuelle du pinceau en pixels.
+/ `color()`: Retourne la couleur actuelle du pinceau sous forme d'entier.
+/ `hex(r, g, b)`: Retourne la couleur sous forme d'entier en combinant les composantes rouge, verte et bleue (valeurs entre 0 et 1).
+/ `rgb(color)`: `color` est un entier représentant la couleur. Retourne la couleur sous forme de liste `[r, g, b]` avec des valeurs entre 0 et 1.
 
 Ces fonctions décrivent l’état du dessin pendant l’évaluation d’une génération,
 indépendamment de l’affichage ou de l’enregistrement de l’image. `marked()`

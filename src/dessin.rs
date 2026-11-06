@@ -3,14 +3,16 @@
 
 use crate::err::{Error, Result};
 use crate::syntax::Token;
+use formulas::EvalValue;
 use tiny_skia::{Color, FillRule, LineCap, Paint, PathBuilder, Pixmap, Stroke, Transform};
 
 type Point = (f64, f64);
 #[derive(Clone, Copy)]
-struct Pose {
-    p: Point,
-    heading: f64,
-    color: u32,
+pub struct Pose {
+    pub p: Point,
+    pub heading: f64,
+    pub color: u32,
+    pub width: f64,
 }
 enum Shape {
     Line(Point, Point, f64, u32),
@@ -18,6 +20,29 @@ enum Shape {
     Polygon(Vec<Point>, u32),
 }
 
+fn n(name: &str, default: f64, t: &Token) -> Result<f64> {
+    Ok(match t.args.get(name) {
+        Some(EvalValue::Int(v)) => *v as f64,
+        Some(EvalValue::Float(v)) => {
+            if !v.is_finite() {
+                return Err(Error::InvalidArgument { field: name.to_string(), expected: "finite number".into(), got: EvalValue::Float(*v) });
+            }
+            *v
+        },
+        Some(EvalValue::Bool(v)) => if *v { 1. } else { 0. },
+        Some(other) => return Err(Error::InvalidArgument { field: name.to_string(), expected: "number".into(), got: other.clone() }),
+        None => default,
+    })
+}
+fn get_col(name: &str, default: u32, t: &Token) -> Result<u32> {
+    Ok(match t.args.get(name) {
+        Some(EvalValue::Int(v)) => if (0..=0xFFFFFF).contains(v) { *v as u32 } else {
+            return Err(Error::InvalidArgument { field: name.to_string(), expected: "color in 0..=0xFFFFFF".into(), got: EvalValue::Int(*v) });
+        },
+        Some(other) => return Err(Error::InvalidArgument { field: name.to_string(), expected: "int".into(), got: other.clone() }),
+        None => default,
+    })
+}
 /// Maintains the turtle even when no image is being captured for this generation.
 pub struct Dessin {
     pose: Pose,
@@ -38,6 +63,7 @@ impl Dessin {
                 p: (0., 0.),
                 heading: 90.,
                 color: 0,
+                width: 1.,
             },
             stack: vec![],
             shapes: vec![],
@@ -51,16 +77,19 @@ impl Dessin {
         d
     }
     /// Clears geometry and branches, returning to bottom center facing upward.
-    /// The current pen color is retained across resets.
+    /// The current pen color is reset to black.
+    /// The pen width is reset to 1.
     pub fn reset(&mut self) {
         self.pose.p = (0., -(self.height as f64) / 2.);
         self.pose.heading = 90.;
+        self.pose.width = 1.;
         self.stack.clear();
         self.shapes.clear();
+        self.pose.color = 0;
         self.fill = None;
     }
-    pub fn pose(&self) -> (Point, f64) {
-        (self.pose.p, self.pose.heading)
+    pub fn pose(&self) -> Pose {
+        self.pose
     }
     fn forward(&self, length: f64) -> Point {
         let a = self.pose.heading.to_radians();
@@ -75,48 +104,58 @@ impl Dessin {
         }
         self.pose.p = p;
     }
+
     /// Executes one primitive; symbols without a primitive action are ignored.
     pub fn apply(&mut self, t: &Token) -> Result<()> {
-        let n = |name: &str, default: f64| -> Result<f64> {
-            Ok(match t.args.get(name) {
-                Some(v) => v.to_f64()?,
-                None => default,
-            })
-        };
         let p = self.pose.p;
         match t.ch.as_ref() {
             "F" | "M" | "D" | "P" => {
                 // F/M move relative to the heading; D/P use absolute coordinates.
                 // Only F and D leave a stroke, but all four extend an active fill.
                 let next = if matches!(t.ch.as_ref(), "F" | "M") {
-                    self.forward(n("length", 1.)?)
+                    self.forward(n("length", 1., t)?)
                 } else {
-                    (n("x", p.0)?, n("y", p.1)?)
+                    (n("x", p.0, t)?, n("y", p.1, t)?)
                 };
-                if self.capture && matches!(t.ch.as_ref(), "F" | "D") {
-                    self.shapes
-                        .push(Shape::Line(p, next, n("width", 1.)?, self.pose.color))
+                if matches!(t.ch.as_ref(), "F" | "D") { 
+                    let col = get_col("color", self.pose.color, t)?;
+                    let w = n("width", self.pose.width, t)?;
+                    if w < 0. {
+                        return Err(Error::InvalidArgument { field: "width".into(), expected: "non-negative number".into(), got: EvalValue::Float(w) });
+                    }   
+                    if self.capture {
+                        self.shapes
+                            .push(Shape::Line(
+                                p, 
+                                next, 
+                                w, 
+                                col,
+                            ))
+                    }
                 }
                 self.go(next);
             }
             "L" => {
                 // A leaf disk is centered one radius ahead without moving the turtle.
-                let r = n("size", 1.)?;
+                let r = n("size", 1., t)?;
+                let col = get_col("color", self.pose.color, t)?;
                 if self.capture {
                     self.shapes
-                        .push(Shape::Disk(self.forward(r), r, self.pose.color))
+                        .push(Shape::Disk(self.forward(r), r, col))
                 }
             }
             "C" => {
-                self.pose.color = t
-                    .args
-                    .get("color")
-                    .map(|v| v.to_i64())
-                    .transpose()?
-                    .unwrap_or(0) as u32
+                self.pose.color = get_col("color", 0, t)?;
             }
-            "R" => self.pose.heading = (self.pose.heading - n("deg", 0.)?).rem_euclid(360.),
-            "H" => self.pose.heading = n("rot", self.pose.heading)?.rem_euclid(360.),
+            "W" => {
+                let width = n("width", 1., t)?;
+                if width < 0. {
+                    return Err(Error::InvalidArgument { field: "width".into(), expected: "non-negative number".into(), got: EvalValue::Float(width) });
+                }
+                self.pose.width = width;
+            }
+            "R" => self.pose.heading = (self.pose.heading - n("deg", 0., t)?).rem_euclid(360.),
+            "H" => self.pose.heading = n("rot", self.pose.heading, t)?.rem_euclid(360.),
             "[" => self.stack.push(self.pose),
             "]" => {
                 if let Some(state) = self.stack.pop() {

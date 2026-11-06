@@ -25,7 +25,7 @@
     "e{x:0,y:0,s:3}",
     "B{x:0,y:0,h:0,l:8,w:3,c:#5E874B}",
     "V{x:0,y:ground+5,side:1,i:0}",
-    "W{x:0,y:0,h:60,j:0,turn:12}",
+    "w{x:0,y:0,h:60,j:0,turn:12}",
     "T{x:0,y:0,h:90,j:0,turn:26}",
     "b{a:0}",
     "p{a:0}",
@@ -63,7 +63,7 @@
       "to": "[P{x:x*scale(),y:y*scale()}O{r:2.5,c:#B2C96C}]"
     },
     {
-      "from": "W",
+      "from": "w",
       "to": "[P{x:x*scale(),y:y*scale()}O{r:1.5,c:#BACD79}]"
     },
     {
@@ -112,7 +112,7 @@
       "name": "Runner makes a side shoot",
       "from": "V",
       "cond": "i<46 && i%10==4 && i>10 && i<35",
-      "to": "B{x:x,y:y,h:(0 if side==1 else 180)+side*([0,9,18,26,30,26,18,9,0,-9,-18,-26,-30,-26,-18,-9,0,5][(i+(3 if side==-1 else 0))%18] if i<36 else (i-36)*14),l:8 if i<36 else 6,w:max(1.5,4-i*0.05)}N{x:pos()[0]/scale(),y:pos()[1]/scale(),h:60 if side==1 else 120,s:16+(i%3)*3,c:#698B49}[T{x:pos()[0]/scale(),y:pos()[1]/scale(),h:280 if side==1 else 260,turn:26*side}][W{x:pos()[0]/scale(),y:pos()[1]/scale(),h:(75 if side==1 else 105) if i!=14 else (285 if side==1 else 255),turn:11*side if i!=14 else -11*side}]V{x:pos()[0]/scale(),y:pos()[1]/scale(),side:side,i:i+1}"
+      "to": "B{x:x,y:y,h:(0 if side==1 else 180)+side*([0,9,18,26,30,26,18,9,0,-9,-18,-26,-30,-26,-18,-9,0,5][(i+(3 if side==-1 else 0))%18] if i<36 else (i-36)*14),l:8 if i<36 else 6,w:max(1.5,4-i*0.05)}N{x:pos()[0]/scale(),y:pos()[1]/scale(),h:60 if side==1 else 120,s:16+(i%3)*3,c:#698B49}[T{x:pos()[0]/scale(),y:pos()[1]/scale(),h:280 if side==1 else 260,turn:26*side}][w{x:pos()[0]/scale(),y:pos()[1]/scale(),h:(75 if side==1 else 105) if i!=14 else (285 if side==1 else 255),turn:11*side if i!=14 else -11*side}]V{x:pos()[0]/scale(),y:pos()[1]/scale(),side:side,i:i+1}"
     },
     {
       "name": "Runner makes a leaf and tendril",
@@ -134,19 +134,19 @@
     },
     {
       "name": "Side shoot unfurls a leaf",
-      "from": "W",
+      "from": "w",
       "cond": "j<29 && (j==5 || j==15)",
-      "to": "B{x:x,y:y,h:h,l:9*pow(0.98,j),w:1.8}N{x:pos()[0]/scale(),y:pos()[1]/scale(),h:h-55,s:16,c:#77914E}e{x:pos()[0]/scale(),y:pos()[1]/scale(),s:2.8}W{x:pos()[0]/scale(),y:pos()[1]/scale(),h:h+turn,j:j+1,turn:turn}"
+      "to": "B{x:x,y:y,h:h,l:9*pow(0.98,j),w:1.8}N{x:pos()[0]/scale(),y:pos()[1]/scale(),h:h-55,s:16,c:#77914E}e{x:pos()[0]/scale(),y:pos()[1]/scale(),s:2.8}w{x:pos()[0]/scale(),y:pos()[1]/scale(),h:h+turn,j:j+1,turn:turn}"
     },
     {
       "name": "Side shoot curls",
-      "from": "W",
+      "from": "w",
       "cond": "j<29 && j!=5 && j!=15",
-      "to": "B{x:x,y:y,h:h,l:9*pow(0.98,j),w:1.8}W{x:pos()[0]/scale(),y:pos()[1]/scale(),h:h+turn,j:j+1,turn:turn}"
+      "to": "B{x:x,y:y,h:h,l:9*pow(0.98,j),w:1.8}w{x:pos()[0]/scale(),y:pos()[1]/scale(),h:h+turn,j:j+1,turn:turn}"
     },
     {
       "name": "Finish side shoot",
-      "from": "W",
+      "from": "w",
       "cond": "j>=29",
       "to": ""
     },

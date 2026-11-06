@@ -32,7 +32,7 @@
     "E{x:0,h:240,b:0,v:0,c:#718B66,flex:1,lean:0}",
     "J{x:0,h:240,b:0,v:0,c:#718B66,flex:1,lean:0}",
     "S{wait:3,q:0}",
-    "W{strength:8}"
+    "w{strength:8}"
   ],
   "drawing": [
     {
@@ -80,7 +80,7 @@
       "to": ""
     },
     {
-      "from": "W",
+      "from": "w",
       "to": ""
     }
   ],
@@ -93,7 +93,7 @@
     {
       "from": "S",
       "cond": "wait==0 && q<gust_chance",
-      "to": "S{wait:rest_min+int(random()*rest_range),q:random()}W{strength:gust_min+random()*(gust_max-gust_min)}"
+      "to": "S{wait:rest_min+int(random()*rest_range),q:random()}w{strength:gust_min+random()*(gust_max-gust_min)}"
     },
     {
       "from": "S",
@@ -101,28 +101,28 @@
       "to": "S{q:random(),wait:0}"
     },
     {
-      "from": "W",
+      "from": "w",
       "to": ""
     },
     {
-      "from": "W < A",
-      "to": "A{x:x,h:h,b:(b+velocity(b,v,flex,lctx(-1)[0].args.strength)).clamp(-max_bend,max_bend),v:velocity(b,v,flex,lctx(-1)[0].args.strength),c:c,flex:flex,lean:lean}W{strength:lctx(-1)[0].args.strength*attenuation}"
+      "from": "w < A",
+      "to": "A{x:x,h:h,b:(b+velocity(b,v,flex,lctx(-1)[0].args.strength)).clamp(-max_bend,max_bend),v:velocity(b,v,flex,lctx(-1)[0].args.strength),c:c,flex:flex,lean:lean}w{strength:lctx(-1)[0].args.strength*attenuation}"
     },
     {
       "from": "A",
       "to": "A{x:x,h:h,b:(b+velocity(b,v,flex,0)).clamp(-max_bend,max_bend),v:velocity(b,v,flex,0),c:c,flex:flex,lean:lean}"
     },
     {
-      "from": "W < E",
-      "to": "E{x:x,h:h,b:(b+velocity(b,v,flex,lctx(-1)[0].args.strength)).clamp(-max_bend,max_bend),v:velocity(b,v,flex,lctx(-1)[0].args.strength),c:c,flex:flex,lean:lean}W{strength:lctx(-1)[0].args.strength*attenuation}"
+      "from": "w < E",
+      "to": "E{x:x,h:h,b:(b+velocity(b,v,flex,lctx(-1)[0].args.strength)).clamp(-max_bend,max_bend),v:velocity(b,v,flex,lctx(-1)[0].args.strength),c:c,flex:flex,lean:lean}w{strength:lctx(-1)[0].args.strength*attenuation}"
     },
     {
       "from": "E",
       "to": "E{x:x,h:h,b:(b+velocity(b,v,flex,0)).clamp(-max_bend,max_bend),v:velocity(b,v,flex,0),c:c,flex:flex,lean:lean}"
     },
     {
-      "from": "W < J",
-      "to": "J{x:x,h:h,b:(b+velocity(b,v,flex,lctx(-1)[0].args.strength)).clamp(-max_bend,max_bend),v:velocity(b,v,flex,lctx(-1)[0].args.strength),c:c,flex:flex,lean:lean}W{strength:lctx(-1)[0].args.strength*attenuation}"
+      "from": "w < J",
+      "to": "J{x:x,h:h,b:(b+velocity(b,v,flex,lctx(-1)[0].args.strength)).clamp(-max_bend,max_bend),v:velocity(b,v,flex,lctx(-1)[0].args.strength),c:c,flex:flex,lean:lean}w{strength:lctx(-1)[0].args.strength*attenuation}"
     },
     {
       "from": "J",

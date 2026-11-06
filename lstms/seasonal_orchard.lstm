@@ -36,7 +36,7 @@
     "T{x:0,y:0,v:0,vx:0,id:0}",
     "G{x:0,a:0,id:0}",
     "Q{x:0,a:0,u:0,id:0}",
-    "W{x:0,a:0}",
+    "w{x:0,a:0}",
     "N{x:0,a:0}",
     "I{x:0,u:0,p:0,id:0}"
   ],
@@ -89,7 +89,7 @@
       "to": "[P{x:x,y:ground+1.5}O{r:1.5,c:#E2CB86}]"
     },
     {
-      "from": "W",
+      "from": "w",
       "to": "[P{x:x,y:ground+1}O{r:max(0.2,1-a*0.12),c:#6D704C}]"
     },
     {
@@ -201,16 +201,16 @@
       "name": "G: release seed"
     },
     {
-      "from": "W",
-      "to": "W{x:x,a:a+1}",
+      "from": "w",
+      "to": "w{x:x,a:a+1}",
       "cond": "a<8",
-      "name": "W: fade seed"
+      "name": "w: fade seed"
     },
     {
-      "from": "W",
+      "from": "w",
       "to": "",
       "cond": "a>=8",
-      "name": "W: remove seed"
+      "name": "w: remove seed"
     },
     {
       "name": "Root census",
@@ -246,7 +246,7 @@
       "name": "Seed fails",
       "from": "I",
       "cond": "u>=p || abs(x)>=habitat",
-      "to": "W{x:x}"
+      "to": "w{x:x}"
     }
   ],
   "seed": "orchard-2026"
