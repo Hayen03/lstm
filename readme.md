@@ -47,7 +47,7 @@ Optional tracing helps inspect rule evaluation:
 | `--trace` | Write trace events to standard error. |
 | `--trace-output <PATH>` | Write traces to a file instead; also enables tracing. |
 | `--trace-format <FORMAT>` | Select `text` (default) or `jsonl`. Does not enable tracing by itself. |
-| `--trace-symbol <SYMBOL>` | Filter by symbol; repeat to include multiple symbols. |
+| `--trace-symbol <SYMBOL>` | Filter by symbol; repeat to include multiple symbols. Uses Unicode NFC normalization, so canonically equivalent spellings match. |
 | `--trace-rule <RULE>` | Filter by rule text or index; repeat to include multiple rules. |
 | `--trace-generations <RANGE>` | Filter by one generation (`3`) or an inclusive range (`0:3`). |
 | `--trace-draw` | Include drawing-phase events. |

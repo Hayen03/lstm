@@ -9,4 +9,4 @@
 
 # Future
 
-- [ ] Add Unicode normalization to the symbols so that visually identical symbols are equal?
+- [x] Normalize symbols to Unicode NFC so canonically equivalent spellings match in declarations, rules, contexts, and trace symbol filters. Preserve case and compatibility distinctions.

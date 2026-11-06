@@ -141,7 +141,21 @@ ne demande aucune suite reproductible particulière.
 
 == Définition d’un symbole
 
-Un symbole est un seul cluster de grapheme Unicode étendu, comme une lettre avec des marques combinées ou une séquence d’emoji. Les symboles sont sensibles à la casse et comparés sans normalisation Unicode. Par conséquent, des formes visuellement identiques telles que `é` précomposé (U+00E9) et `e` suivi d’un accent aigu combiné (U+0065 U+0301) sont traitées comme des symboles différents.
+Un symbole est un seul groupe de graphèmes étendu Unicode, comme une lettre
+avec des marques combinantes ou une séquence d’emoji. Les symboles sont
+sensibles à la casse et normalisés en Unicode NFC avant comparaison.
+Les formes canoniquement équivalentes, telles que `é` précomposé (U+00E9)
+et `e` suivi d’un accent aigu combiné (U+0065 U+0301), désignent donc le même
+symbole. Les variantes de compatibilité telles que `①` et `1` restent
+distinctes, tout comme `é` et `É`.
+
+Cela s’applique aux déclarations, aux axiomes, aux mots de remplacement et
+aux motifs centraux et de contexte des règles de croissance et de dessin.
+Les échappements JSON5 sont décodés d’abord : `"é"` et `"e\u0301"` désignent
+ainsi le même symbole. Les valeurs de symbole exposées par `lctx()` et
+`rctx()` utilisent la forme normalisée. Le texte des formules, les noms
+d’arguments et les valeurs de chaîne ne sont pas normalisés ; une formule
+comparant un symbole de contexte à une chaîne doit utiliser sa forme NFC.
 
 Chaque entrée de `symbols` est une chaîne décrivant un token et ses valeurs
 par défaut. Dans `symbols: ["A{x: 2}"]`, les occurrences `A` et `A{x: 5}`
@@ -203,14 +217,14 @@ arguments ::= argument { "," argument } [ "," ] ;
 argument  ::= identificateur ":" expression ;
 ```
 
-Un symbole est un *caractère Unicode unique*, sensible à la casse. Pour éviter
+Un symbole est un *seul groupe de graphèmes étendu Unicode*. Pour éviter
 toute ambiguïté, un symbole conforme ne doit être ni un espace ni l’un des
 délimiteurs `{`, `}`, `:`, `,`, `'` ou `"`, ni l’un des caractères réservés
 aux motifs de contexte : `+`, `.`, `-`, `*`, `^`, `$`, `|`, `?`, `>`, `<`.
 Les caractères `[` et `]` sont
 autorisés comme symboles autonomes et servent aux embranchements du dessin et du contexte.
-Une lettre accentuée composée de plusieurs points de code ne constitue pas
-nécessairement un symbole unique.
+Un groupe de graphèmes peut contenir plusieurs points de code Unicode et
+constituer un seul symbole, même si NFC ne possède aucune forme précomposée pour lui.
 
 Les tokens sont juxtaposés, avec ou sans espaces entre eux : `ABC` est le mot
 de trois tokens `A`, `B`, `C`. Il ne désigne pas un symbole nommé `ABC`.

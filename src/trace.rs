@@ -5,8 +5,12 @@ use crate::err::{Error, Result, ensure};
 use clap::Args;
 use serde_json::{Value, json};
 use std::{
-    fs::File, io::{self, Write}, path::PathBuf, sync::Arc,
+    fs::File,
+    io::{self, Write},
+    path::PathBuf,
+    sync::Arc,
 };
+use unicode_normalization::UnicodeNormalization;
 
 #[derive(Args, Default, Clone)]
 pub struct Options {
@@ -56,7 +60,11 @@ pub struct Trace {
     pub rule: Option<(usize, String)>,
 }
 impl Trace {
-    pub fn new(options: Options) -> Result<Self> {
+    pub fn new(mut options: Options) -> Result<Self> {
+        // Match the NFC representation stored by the symbol parser.
+        for symbol in &mut options.trace_symbol {
+            *symbol = symbol.nfc().collect();
+        }
         // A filter or drawing switch enables tracing on its own. An explicit file
         // also enables output; otherwise enabled traces go to stderr.
         let enabled = options.trace
@@ -92,7 +100,8 @@ impl Trace {
         if phase == "drawing" && !o.trace_draw
             || o.trace_generations
                 .is_some_and(|(a, b)| self.generation < a || self.generation > b)
-            || !o.trace_symbol.is_empty() && !o.trace_symbol.contains(&self.symbol.to_string())
+            || !o.trace_symbol.is_empty()
+                && !o.trace_symbol.iter().any(|s| s == self.symbol.as_ref())
             || !o.trace_rule.is_empty()
                 && !self.rule.as_ref().is_some_and(|(i, r)| {
                     o.trace_rule.contains(r) || o.trace_rule.contains(&i.to_string())

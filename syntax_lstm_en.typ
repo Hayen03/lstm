@@ -139,7 +139,19 @@ request any particular reproducible sequence.
 
 == Defining a symbol
 
-A symbol is a single Unicode extended grapheme cluster, such as a letter with combining marks or an emoji sequence. Symbols are case-sensitive and compared without Unicode normalization. Consequently, visually identical forms such as precomposed `é` (U+00E9) and `e` followed by a combining acute accent (U+0065 U+0301) are treated as different symbols.
+A symbol is a single Unicode extended grapheme cluster, such as a letter
+with combining marks or an emoji sequence. Symbols are case-sensitive and
+normalized to Unicode NFC before comparison. Canonically equivalent forms,
+such as precomposed `é` (U+00E9) and `e` followed by a combining acute accent
+(U+0065 U+0301), therefore identify the same symbol. Compatibility variants
+such as `①` and `1` remain distinct, as do `é` and `É`.
+
+This applies to declarations, axioms, replacement words, and central and
+context patterns in both growth and drawing rules. JSON5 escapes are decoded
+first: `"é"` and `"e\u0301"` thus identify the same symbol. Symbol values
+exposed by `lctx()` and `rctx()` use the normalized spelling. Formula text,
+argument names, and string values are not normalized; a formula comparing
+a context symbol to a string should use that symbol's NFC spelling.
 
 Each entry in `symbols` is a string describing a token and its default values.
 With `symbols: ["A{x: 2}"]`, the occurrences `A` and `A{x: 5}` receive 2 and 5
@@ -200,14 +212,14 @@ arguments ::= argument { "," argument } [ "," ] ;
 argument  ::= identifier ":" expression ;
 ```
 
-A symbol is a *single Unicode character* and is case-sensitive. To avoid
+A symbol is a *single Unicode extended grapheme cluster*. To avoid
 ambiguity, a valid symbol must not be whitespace or one of the delimiters
 `{`, `}`, `:`, `,`, `'`, or `"`, nor one of the characters reserved for
 context patterns: `+`, `.`, `-`, `*`, `^`, `$`, `|`, `?`, `>`, `<`.
 The characters `[` and `]` are allowed as standalone symbols and define
 branches in drawing and context.
-An accented letter composed of several code points does not necessarily
-constitute a single symbol.
+A grapheme cluster may contain several Unicode code points and still
+constitute one symbol, including when NFC has no precomposed form for it.
 
 Tokens are juxtaposed, with or without spaces between them: `ABC` is a word
 of three tokens, `A`, `B`, and `C`. It does not denote a symbol named `ABC`.

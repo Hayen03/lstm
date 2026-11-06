@@ -6,6 +6,7 @@ use crate::err::{Result, SyntaxError, ensure};
 use formulas::{EvalValue as V, parse_next};
 use indexmap::IndexMap;
 use std::sync::Arc;
+use unicode_normalization::UnicodeNormalization;
 use unicode_segmentation::UnicodeSegmentation;
 
 // Preserve declaration order: evaluating arguments may consume randomness or marks.
@@ -95,13 +96,19 @@ pub fn args(mut s: &str) -> Result<Args> {
 }
 /// Consumes one symbol and its optional argument block, leaving the suffix.
 pub fn atom(s: &str) -> Result<(Template, &str)> {
-    let ch = s.graphemes(true).next().ok_or(SyntaxError::MissingSymbol)?;
-    let rest = &s[ch.len()..];
+    let raw = s.graphemes(true).next().ok_or(SyntaxError::MissingSymbol)?;
+    // Slice the original input before normalization, which may change byte length.
+    let rest = &s[raw.len()..];
+    let ch: Arc<str> = if raw.is_ascii() {
+        Arc::from(raw)
+    } else {
+        raw.nfc().collect::<String>().into()
+    };
     if rest.starts_with('{') {
         let end = block(rest)?;
         Ok((
             Template {
-                ch: Arc::from(ch),
+                ch,
                 args: args(&rest[1..end - 1])?,
             },
             &rest[end..],
@@ -109,7 +116,7 @@ pub fn atom(s: &str) -> Result<(Template, &str)> {
     } else {
         Ok((
             Template {
-                ch: Arc::from(ch),
+                ch,
                 args: Args::new(),
             },
             rest,
@@ -123,7 +130,9 @@ pub fn word(mut s: &str) -> Result<Vec<Template>> {
         let (t, rest) = atom(s.trim_start())?;
         ensure!(
             !META.contains(t.ch.as_ref()) && !r#"{}:,"'"#.contains(t.ch.as_ref()),
-            SyntaxError::ReservedSymbol { symbol: t.ch.clone() }
+            SyntaxError::ReservedSymbol {
+                symbol: t.ch.clone()
+            }
         );
         out.push(t);
         s = rest;
@@ -137,4 +146,35 @@ pub fn single(s: &str) -> Result<Template> {
         SyntaxError::ExpectedSingleSymbol { input: s.into() }
     );
     Ok(w.remove(0))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn normalization_preserves_source_offsets_and_argument_text() -> Result<()> {
+        for (raw, normalized) in [
+            ("e\u{301}", "é"),
+            ("é", "é"),
+            ("\u{344}", "\u{308}\u{301}"),
+            ("👩‍🔬", "👩‍🔬"),
+        ] {
+            let source = format!("{raw}{{text: 'e\u{301}'}}B");
+            let (token, rest) = atom(&source)?;
+            assert_eq!(token.ch.as_ref(), normalized);
+            assert_eq!(token.args["text"], "'e\u{301}'");
+            assert_eq!(rest, "B");
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn normalization_preserves_case_and_compatibility_distinctions() -> Result<()> {
+        for (a, b) in [("é", "É"), ("①", "1"), ("ﬁ", "f"), ("Ａ", "A")] {
+            assert_ne!(single(a)?.ch, single(b)?.ch);
+        }
+        assert_eq!(word("e\u{301}👩‍🔬①")?.len(), 3);
+        Ok(())
+    }
 }

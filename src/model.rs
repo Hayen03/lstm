@@ -729,6 +729,47 @@ mod tests {
     }
 
     #[test]
+    fn canonical_symbols_share_defaults_rules_and_drawing_contexts() -> Result<()> {
+        // JSON5 decodes the escapes; only symbol spellings are normalized.
+        let src = r#"{
+          axiom: "P{x:0,y:0}H{rot:0}éAö",
+          symbols: ["e\u0301{x:2}"],
+          rules: [{from:"e\u0301 < A > o\u0308",
+                   cond:"lctx(-1)[0].symbol == 'é' && rctx(0)[0].symbol == 'ö'",
+                   to:"a\u030A{v:lctx(-1)[0].args.x}"}],
+          drawing: [
+            {from:"e\u0301",to:"F{length:x}"},
+            {from:"é < å > o\u0308",to:"👩‍🔬{v:v}"},
+            {from:"e\u0301 < 👩‍🔬 > ö",to:"F{length:v+3}"}
+          ]
+        }"#;
+        let frames = generations(src, 1, false)?;
+        assert_eq!(frames[0][2].ch.as_ref(), "é");
+        assert_eq!(frames[0][2].args["x"], V::Int(2));
+        assert_eq!(frames[1][3].ch.as_ref(), "å");
+        assert_eq!(frames[1][3].args["v"], V::Int(2));
+        assert_eq!(final_pose(src, 1)?, 7.);
+        Ok(())
+    }
+
+    #[test]
+    fn context_operators_do_not_split_grapheme_symbols() -> Result<()> {
+        for (axiom, from, expected) in [
+            ("F\u{307}A", "Ḟ < A", "ḞZ"),
+            ("AF\u{307}", "A > Ḟ", "ZḞ"),
+            ("<\u{301}", "<\u{301}", "Z"),
+            ("<\u{301}A", "<\u{301} < A", "<\u{301}Z"),
+            ("👩‍🔬👩‍🔬A", "👩‍🔬[2] < A", "👩‍🔬👩‍🔬Z"),
+        ] {
+            let src = json!({"axiom":axiom,"rules":[{"from":from,"to":"Z"}]}).to_string();
+            let frames = generations(&src, 1, false)?;
+            let actual: String = frames[1].iter().map(|t| t.ch.as_ref()).collect();
+            assert_eq!(actual, expected, "pattern {from}");
+        }
+        Ok(())
+    }
+
+    #[test]
     fn globals_are_eager_and_lexically_scoped() -> Result<()> {
         let src = r#"{axiom:"A{x:3}",
           globals:{x:"99",b:"4",a:"b+1",
@@ -976,7 +1017,10 @@ mod tests {
             ),
         ] {
             for (tokens, word) in generations(model, 3, true)?.iter().zip(words) {
-                assert_eq!(tokens.iter().map(|t| t.ch.to_string()).collect::<String>(), word);
+                assert_eq!(
+                    tokens.iter().map(|t| t.ch.to_string()).collect::<String>(),
+                    word
+                );
             }
         }
         Ok(())
