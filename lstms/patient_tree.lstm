@@ -1,3 +1,4 @@
+// Canvas origin: bottom center. Geometry data stays center-relative; P/D add screen()[1]/2.
 // One persistent tree. 360 frames/year; first flowers in year five.
 // Irregular curved wood, six independently timed leaves per site, no reseeding.
 {
@@ -24,7 +25,7 @@
     "wave": "fn t -> 1-abs(4*(t%1)-2)",
     "fruit_chance": "0.42"
   },
-  "axiom": "ZP{x:0,y:ground}H{rot:90}S",
+  "axiom": "ZP{x:0,y:screen()[1]/2+(ground)}H{rot:90}S",
   "symbols": [
     "Z",
     "O{r:3,c:#FFFFFF}",
@@ -45,7 +46,7 @@
   "drawing": [
     {
       "from": "Z",
-      "to": "[P{x:-390,y:ground}H{rot:0}C{color:#526D50}F{length:780,width:5}][P{x:-390,y:ground-18}H{rot:0}C{color:#8AB477 if phase(gen())<0.28 else (#D3BD6E if phase(gen())<0.60 else (#BD784D if phase(gen())<0.86 else #829FAB))}F{length:780*phase(gen()),width:3}]"
+      "to": "[P{x:-390,y:screen()[1]/2+(ground)}H{rot:0}C{color:#526D50}F{length:780,width:5}][P{x:-390,y:screen()[1]/2+(ground-18)}H{rot:0}C{color:#8AB477 if phase(gen())<0.28 else (#D3BD6E if phase(gen())<0.60 else (#BD784D if phase(gen())<0.86 else #829FAB))}F{length:780*phase(gen()),width:3}]"
     },
     {
       "from": "O",
@@ -87,7 +88,7 @@
     },
     {
       "from": "T",
-      "to": "[P{x:x,y:y}O{r:7,c:#D1AF52}]"
+      "to": "[P{x:x,y:screen()[1]/2+(y)}O{r:7,c:#D1AF52}]"
     },
     {
       "from": "G",
@@ -95,15 +96,15 @@
         "r": "7 if a<year*0.12 else max(0.4,7*(1-(a/year-0.12)/0.12))",
         "c": "#D8A14B if a<year*0.035 else (#CD6643 if a<year*0.12 else #77553A)"
       },
-      "to": "[P{x:x,y:ground+r}O{r:r,c:c}]"
+      "to": "[P{x:x,y:screen()[1]/2+(ground+r)}O{r:r,c:c}]"
     },
     {
       "from": "J",
-      "to": "[P{x:x,y:y}H{rot:h}N{s:s,c:#C39045}]"
+      "to": "[P{x:x,y:screen()[1]/2+(y)}H{rot:h}N{s:s,c:#C39045}]"
     },
     {
       "from": "w",
-      "to": "[P{x:x,y:ground+1}H{rot:h}N{s:max(0.3,s*(1-a/(year*0.12))),c:#8F713F}]"
+      "to": "[P{x:x,y:screen()[1]/2+(ground+1)}H{rot:h}N{s:max(0.3,s*(1-a/(year*0.12))),c:#8F713F}]"
     },
     {
       "from": "I",
@@ -185,13 +186,13 @@
     {
       "name": "Individual fruit drop",
       "from": "U",
-      "to": "T{x:pos()[0],y:pos()[1]-6,vx:(q-0.5)*1.3}",
+      "to": "T{x:pos()[0],y:(pos()[1]-screen()[1]/2)-6,vx:(q-0.5)*1.3}",
       "cond": "phase(gen())>=0.50+q*0.22"
     },
     {
       "name": "Individual autumn leaf fall",
       "from": "I",
-      "to": "J{x:pos()[0],y:pos()[1],h:heading()-a,vx:(q-0.5)*1.5,s:s}",
+      "to": "J{x:pos()[0],y:(pos()[1]-screen()[1]/2),h:heading()-a,vx:(q-0.5)*1.5,s:s}",
       "cond": "phase(gen())>=0.64+q*0.20"
     },
     {

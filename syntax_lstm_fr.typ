@@ -510,7 +510,7 @@ est terminal et invisible.
 
 == Primitives
 
-Le repère du canevas est centré, avec l’axe horizontal orienté vers la droite
+Le repère du canevas est situé à l’origine en bas au centre, avec l’axe horizontal orienté vers la droite
 et l’axe vertical vers le haut. Une unité correspond à un pixel. Les tailles de points
 et les épaisseurs sont exprimées en pixels. Les angles sont exprimés en degrés.
 Les paramètres omis reçoivent les valeurs de la table suivante. Ces valeurs

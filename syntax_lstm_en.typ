@@ -521,7 +521,7 @@ is terminal and invisible.
 
 == Primitives
 
-The canvas coordinate system is centered, with the horizontal axis pointing
+The canvas coordinate system has the origin at the bottom-center, with the horizontal axis pointing
 right and the vertical axis pointing upward. One unit corresponds to one
 pixel. Point sizes and stroke widths are expressed in pixels. Angles are
 expressed in degrees. Omitted parameters receive the values in the table

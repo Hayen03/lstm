@@ -1,3 +1,4 @@
+// Canvas origin: bottom center. Geometry data stays center-relative; P/D add screen()[1]/2.
 {
   "name": "Wild orchard \u2014 seasons and competition",
   "description": "A stochastic plant life cycle with seasonal germination and previous-frame root competition. Use animation.",
@@ -43,7 +44,7 @@
   "drawing": [
     {
       "from": "Z",
-      "to": "[P{x:-habitat,y:ground}H{rot:0}C{color:#59754C}F{length:habitat*2,width:4}][P{x:-habitat,y:ground-13}H{rot:0}C{color:#8AA761 if season(gen()) else #4C6573}F{length:habitat*2*((gen()%season_length)/season_length),width:2}]"
+      "to": "[P{x:-habitat,y:screen()[1]/2+(ground)}H{rot:0}C{color:#59754C}F{length:habitat*2,width:4}][P{x:-habitat,y:screen()[1]/2+(ground-13)}H{rot:0}C{color:#8AA761 if season(gen()) else #4C6573}F{length:habitat*2*((gen()%season_length)/season_length),width:2}]"
     },
     {
       "from": "O",
@@ -59,38 +60,38 @@
     },
     {
       "from": "A",
-      "to": "[P{x:x,y:y}H{rot:h}O{r:2.2,c:#B5D987}]"
+      "to": "[P{x:x,y:screen()[1]/2+(y)}H{rot:h}O{r:2.2,c:#B5D987}]"
     },
     {
       "from": "B",
-      "to": "P{x:x,y:y}H{rot:h}C{color:#579257 if a<yellow_age else #9A794E}F{length:l,width:max(0.5,(3.5-d*0.65)*min(1,(stem_life-a)/15))}[R{deg:-45}V{s:max(0.3,(12-d)*min(1,(stem_life-a)/25)),c:#74B16B if a<yellow_age else #B09350}][R{deg:50}V{s:max(0.3,(9-d)*min(1,(stem_life-a)/25)),c:#589962 if a<yellow_age else #8B7348}]"
+      "to": "P{x:x,y:screen()[1]/2+(y)}H{rot:h}C{color:#579257 if a<yellow_age else #9A794E}F{length:l,width:max(0.5,(3.5-d*0.65)*min(1,(stem_life-a)/15))}[R{deg:-45}V{s:max(0.3,(12-d)*min(1,(stem_life-a)/25)),c:#74B16B if a<yellow_age else #B09350}][R{deg:50}V{s:max(0.3,(9-d)*min(1,(stem_life-a)/25)),c:#589962 if a<yellow_age else #8B7348}]"
     },
     {
       "from": "E",
-      "to": "[P{x:x,y:y}K{r:2+min(a,6)*0.35}]"
+      "to": "[P{x:x,y:screen()[1]/2+(y)}K{r:2+min(a,6)*0.35}]"
     },
     {
       "from": "U",
-      "to": "[P{x:x,y:y}O{r:2+min(a,12)*0.42,c:#86AE59 if a<7 else (#E3B954 if a<12 else #D96947)}H{rot:90}M{length:2+min(a,12)*0.42}C{color:#6E7044}F{length:3,width:1}]"
+      "to": "[P{x:x,y:screen()[1]/2+(y)}O{r:2+min(a,12)*0.42,c:#86AE59 if a<7 else (#E3B954 if a<12 else #D96947)}H{rot:90}M{length:2+min(a,12)*0.42}C{color:#6E7044}F{length:3,width:1}]"
     },
     {
       "from": "T",
-      "to": "[P{x:x,y:y}O{r:7,c:#D96947}]"
+      "to": "[P{x:x,y:screen()[1]/2+(y)}O{r:7,c:#D96947}]"
     },
     {
       "from": "G",
-      "to": "[P{x:x,y:ground+max(1,7-a*0.5)}O{r:max(1,7-a*0.5),c:#9A6643 if a<6 else #66583D}]"
+      "to": "[P{x:x,y:screen()[1]/2+(ground+max(1,7-a*0.5))}O{r:max(1,7-a*0.5),c:#9A6643 if a<6 else #66583D}]"
     },
     {
       "from": "Q",
       "locals": {
         "record": "mark({'x':x,'w':0.15})"
       },
-      "to": "[P{x:x,y:ground+1.5}O{r:1.5,c:#E2CB86}]"
+      "to": "[P{x:x,y:screen()[1]/2+(ground+1.5)}O{r:1.5,c:#E2CB86}]"
     },
     {
       "from": "w",
-      "to": "[P{x:x,y:ground+1}O{r:max(0.2,1-a*0.12),c:#6D704C}]"
+      "to": "[P{x:x,y:screen()[1]/2+(ground+1)}O{r:max(0.2,1-a*0.12),c:#6D704C}]"
     },
     {
       "from": "N",
@@ -104,39 +105,39 @@
       "locals": {
         "record": "mark({'x':x,'w':0.15})"
       },
-      "to": "[P{x:x,y:ground+1.5}O{r:1.5,c:#E2CB86}]"
+      "to": "[P{x:x,y:screen()[1]/2+(ground+1.5)}O{r:1.5,c:#E2CB86}]"
     }
   ],
   "rules": [
     {
       "from": "A",
-      "to": "B{x:x,y:y,h:h,l:l,d:d,a:d*8+n*2,id:id}A{x:pos()[0],y:pos()[1],h:heading(),d:d,n:n+1,id:id,l:l}",
+      "to": "B{x:x,y:y,h:h,l:l,d:d,a:d*8+n*2,id:id}A{x:pos()[0],y:(pos()[1]-screen()[1]/2),h:heading(),d:d,n:n+1,id:id,l:l}",
       "cond": "n<2",
       "name": "A: extend shoot"
     },
     {
       "from": "A",
-      "to": "B{x:x,y:y,h:h,l:l,d:d,a:d*8+n*2,id:id}A{x:pos()[0],y:pos()[1],h:h+22+random()*10,d:d+1,n:0,id:id,l:l*(0.76+random()*0.12)}A{x:pos()[0],y:pos()[1],h:h-22-random()*10,d:d+1,n:0,id:id,l:l*(0.76+random()*0.12)}",
+      "to": "B{x:x,y:y,h:h,l:l,d:d,a:d*8+n*2,id:id}A{x:pos()[0],y:(pos()[1]-screen()[1]/2),h:h+22+random()*10,d:d+1,n:0,id:id,l:l*(0.76+random()*0.12)}A{x:pos()[0],y:(pos()[1]-screen()[1]/2),h:h-22-random()*10,d:d+1,n:0,id:id,l:l*(0.76+random()*0.12)}",
       "cond": "n>=2 && d==0",
       "name": "A: first fork"
     },
     {
       "from": "A",
-      "to": "B{x:x,y:y,h:h,l:l,d:d,a:d*8+n*2,id:id}A{x:pos()[0],y:pos()[1],h:h+22+random()*10,d:d+1,n:0,id:id,l:l*(0.76+random()*0.12)}A{x:pos()[0],y:pos()[1],h:h-22-random()*10,d:d+1,n:0,id:id,l:l*(0.76+random()*0.12)}",
+      "to": "B{x:x,y:y,h:h,l:l,d:d,a:d*8+n*2,id:id}A{x:pos()[0],y:(pos()[1]-screen()[1]/2),h:h+22+random()*10,d:d+1,n:0,id:id,l:l*(0.76+random()*0.12)}A{x:pos()[0],y:(pos()[1]-screen()[1]/2),h:h-22-random()*10,d:d+1,n:0,id:id,l:l*(0.76+random()*0.12)}",
       "cond": "n>=2 && d>0 && d<3",
       "weight": 73,
       "name": "A: fork"
     },
     {
       "from": "A",
-      "to": "B{x:x,y:y,h:h,l:l,d:d,a:d*8+n*2,id:id}A{x:pos()[0],y:pos()[1],h:h+(random()-0.5)*14,d:d+1,n:0,id:id,l:l*0.82}",
+      "to": "B{x:x,y:y,h:h,l:l,d:d,a:d*8+n*2,id:id}A{x:pos()[0],y:(pos()[1]-screen()[1]/2),h:h+(random()-0.5)*14,d:d+1,n:0,id:id,l:l*0.82}",
       "cond": "n>=2 && d>0 && d<3",
       "weight": 27,
       "name": "A: continue single shoot"
     },
     {
       "from": "A",
-      "to": "B{x:x,y:y,h:h,l:l,d:d,a:d*8+n*2,id:id}E{x:pos()[0],y:pos()[1],id:id}",
+      "to": "B{x:x,y:y,h:h,l:l,d:d,a:d*8+n*2,id:id}E{x:pos()[0],y:(pos()[1]-screen()[1]/2),id:id}",
       "cond": "n>=2 && d>=3",
       "name": "A: flower tip"
     },

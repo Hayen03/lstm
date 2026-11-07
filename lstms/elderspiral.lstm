@@ -1,3 +1,4 @@
+// Canvas origin: bottom center. Geometry data stays center-relative; P/D add screen()[1]/2.
 // One year = 96 frames. Try year:24 for a time-lapse.
 {
   "name": "Elderspiral \u2014 the hollow orchard",
@@ -26,7 +27,7 @@
     "ageof": "fn b -> max(0,wood_time(gen())-wood_time(b))/grow_end",
     "woodw": "fn age,d -> max(0.7,(1+82*age/(age+19))*0.70.pow(d))"
   },
-  "axiom": "ZP{x:0,y:ground}H{rot:90}S",
+  "axiom": "ZP{x:0,y:screen()[1]/2+(ground)}H{rot:90}S",
   "symbols": [
     "Z",
     "O{r:3,c:#FFFFFF}",
@@ -52,7 +53,7 @@
   "drawing": [
     {
       "from": "Z",
-      "to": "[P{x:-630,y:ground}H{rot:0}C{color:#526D50}F{length:1260,width:5}][P{x:-630,y:ground-18}H{rot:0}C{color:#8AB477 if phase(gen())<0.28 else (#D3BD6E if phase(gen())<0.60 else (#BD784D if phase(gen())<0.86 else #829FAB))}F{length:1260*phase(gen()),width:3}]"
+      "to": "[P{x:-630,y:screen()[1]/2+(ground)}H{rot:0}C{color:#526D50}F{length:1260,width:5}][P{x:-630,y:screen()[1]/2+(ground-18)}H{rot:0}C{color:#8AB477 if phase(gen())<0.28 else (#D3BD6E if phase(gen())<0.60 else (#BD784D if phase(gen())<0.86 else #829FAB))}F{length:1260*phase(gen()),width:3}]"
     },
     {
       "from": "O",
@@ -87,7 +88,7 @@
     },
     {
       "from": "T",
-      "to": "[P{x:x,y:y}O{r:7,c:#D1AF52}]"
+      "to": "[P{x:x,y:screen()[1]/2+(y)}O{r:7,c:#D1AF52}]"
     },
     {
       "from": "G",
@@ -95,15 +96,15 @@
         "r": "7 if a<year*0.12 else max(0.4,7*(1-(a/year-0.12)/0.12))",
         "c": "#D8A14B if a<year*0.035 else (#CD6643 if a<year*0.12 else #77553A)"
       },
-      "to": "[P{x:x,y:ground+r}O{r:r,c:c}]"
+      "to": "[P{x:x,y:screen()[1]/2+(ground+r)}O{r:r,c:c}]"
     },
     {
       "from": "J",
-      "to": "[P{x:x,y:y}H{rot:h}p{s:s,c:#C39045}]"
+      "to": "[P{x:x,y:screen()[1]/2+(y)}H{rot:h}p{s:s,c:#C39045}]"
     },
     {
       "from": "w",
-      "to": "[P{x:x,y:ground+1}H{rot:h}p{s:max(0.3,s*(1-a/(year*0.12))),c:#8F713F}]"
+      "to": "[P{x:x,y:screen()[1]/2+(ground+1)}H{rot:h}p{s:max(0.3,s*(1-a/(year*0.12))),c:#8F713F}]"
     },
     {
       "from": "I",
@@ -132,7 +133,7 @@
     {
       "name": "Ancient root flare and hollow",
       "from": "B{d:0}",
-      "to": "[H{rot:0}C{color:#634837}M{length:-w*1.32}(D{x:px-w*0.36,y:py+w*0.85,width:1}D{x:px+w*0.36,y:py+w*0.85,width:1}D{x:px+w*1.4,y:py,width:1}D{x:px-w*1.32,y:py,width:1})]H{rot:h+sag}a{n:7,l:unit,w:w,bend:k/7,tw:tw}[P{x:px+w*0.04+(-0.1725)*w,y:py+w*0.44+(-0.3680)*w}C{color:#957652}(D{x:px+w*0.04+(-0.1725)*w,y:py+w*0.44+(0.1610)*w,width:1}D{x:px+w*0.04+(-0.0575)*w,y:py+w*0.44+(0.5290)*w,width:1}D{x:px+w*0.04+(0.0633)*w,y:py+w*0.44+(0.4140)*w,width:1}D{x:px+w*0.04+(0.1610)*w,y:py+w*0.44+(0.1380)*w,width:1}D{x:px+w*0.04+(0.2070)*w,y:py+w*0.44+(-0.2760)*w,width:1}D{x:px+w*0.04+(0.1035)*w,y:py+w*0.44+(-0.3680)*w,width:1}D{x:px+w*0.04+(-0.1725)*w,y:py+w*0.44+(-0.3680)*w,width:1})][P{x:px+w*0.04+(-0.1320)*w,y:py+w*0.44+(-0.2816)*w}C{color:#392F29}(D{x:px+w*0.04+(-0.1320)*w,y:py+w*0.44+(0.1232)*w,width:1}D{x:px+w*0.04+(-0.0440)*w,y:py+w*0.44+(0.4048)*w,width:1}D{x:px+w*0.04+(0.0484)*w,y:py+w*0.44+(0.3168)*w,width:1}D{x:px+w*0.04+(0.1232)*w,y:py+w*0.44+(0.1056)*w,width:1}D{x:px+w*0.04+(0.1584)*w,y:py+w*0.44+(-0.2112)*w,width:1}D{x:px+w*0.04+(0.0792)*w,y:py+w*0.44+(-0.2816)*w,width:1}D{x:px+w*0.04+(-0.1320)*w,y:py+w*0.44+(-0.2816)*w,width:1})]",
+      "to": "[H{rot:0}C{color:#634837}M{length:-w*1.32}(D{x:px-w*0.36,y:screen()[1]/2+(py+w*0.85),width:1}D{x:px+w*0.36,y:screen()[1]/2+(py+w*0.85),width:1}D{x:px+w*1.4,y:screen()[1]/2+(py),width:1}D{x:px-w*1.32,y:screen()[1]/2+(py),width:1})]H{rot:h+sag}a{n:7,l:unit,w:w,bend:k/7,tw:tw}[P{x:px+w*0.04+(-0.1725)*w,y:screen()[1]/2+(py+w*0.44+(-0.3680)*w)}C{color:#957652}(D{x:px+w*0.04+(-0.1725)*w,y:screen()[1]/2+(py+w*0.44+(0.1610)*w),width:1}D{x:px+w*0.04+(-0.0575)*w,y:screen()[1]/2+(py+w*0.44+(0.5290)*w),width:1}D{x:px+w*0.04+(0.0633)*w,y:screen()[1]/2+(py+w*0.44+(0.4140)*w),width:1}D{x:px+w*0.04+(0.1610)*w,y:screen()[1]/2+(py+w*0.44+(0.1380)*w),width:1}D{x:px+w*0.04+(0.2070)*w,y:screen()[1]/2+(py+w*0.44+(-0.2760)*w),width:1}D{x:px+w*0.04+(0.1035)*w,y:screen()[1]/2+(py+w*0.44+(-0.3680)*w),width:1}D{x:px+w*0.04+(-0.1725)*w,y:screen()[1]/2+(py+w*0.44+(-0.3680)*w),width:1})][P{x:px+w*0.04+(-0.1320)*w,y:screen()[1]/2+(py+w*0.44+(-0.2816)*w)}C{color:#392F29}(D{x:px+w*0.04+(-0.1320)*w,y:screen()[1]/2+(py+w*0.44+(0.1232)*w),width:1}D{x:px+w*0.04+(-0.0440)*w,y:screen()[1]/2+(py+w*0.44+(0.4048)*w),width:1}D{x:px+w*0.04+(0.0484)*w,y:screen()[1]/2+(py+w*0.44+(0.3168)*w),width:1}D{x:px+w*0.04+(0.1232)*w,y:screen()[1]/2+(py+w*0.44+(0.1056)*w),width:1}D{x:px+w*0.04+(0.1584)*w,y:screen()[1]/2+(py+w*0.44+(-0.2112)*w),width:1}D{x:px+w*0.04+(0.0792)*w,y:screen()[1]/2+(py+w*0.44+(-0.2816)*w),width:1}D{x:px+w*0.04+(-0.1320)*w,y:screen()[1]/2+(py+w*0.44+(-0.2816)*w),width:1})]",
       "cond": "ageof(born)>=veteran",
       "locals": {
         "age": "ageof(born)",
@@ -141,7 +142,7 @@
         "tw": "(1 if k>=0 else -1)*(age/(age+14))*(22 if d==0 else (12 if d<3 else 4))",
         "sag": "(1 if h>=90 else -1)*min(19,age*0.6) if d>0 else 0",
         "px": "pos()[0]",
-        "py": "pos()[1]"
+        "py": "(pos()[1]-screen()[1]/2)"
       },
       "specificity": 3
     },
@@ -270,13 +271,13 @@
     {
       "name": "Individual fruit drop",
       "from": "U",
-      "to": "T{x:pos()[0],y:pos()[1]-6,vx:(q-0.5)*1.3}",
+      "to": "T{x:pos()[0],y:(pos()[1]-screen()[1]/2)-6,vx:(q-0.5)*1.3}",
       "cond": "phase(gen())>=0.50+q*0.22"
     },
     {
       "name": "Individual autumn leaf fall",
       "from": "I",
-      "to": "J{x:pos()[0],y:pos()[1],h:heading()-a,vx:(q-0.5)*1.5,s:s}",
+      "to": "J{x:pos()[0],y:(pos()[1]-screen()[1]/2),h:heading()-a,vx:(q-0.5)*1.5,s:s}",
       "cond": "phase(gen())>=0.64+q*0.20"
     },
     {

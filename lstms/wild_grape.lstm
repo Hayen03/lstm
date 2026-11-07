@@ -1,3 +1,4 @@
+// Canvas origin: bottom center. Geometry data stays center-relative; P/D add screen()[1]/2.
 // Wild grape. Run with --animate, or export the final frame at -n 205.
 {
   "name": "Wild grape \u2014 over the garden wires",
@@ -134,22 +135,22 @@
     {
       "name": "Quiet garden wires",
       "from": "Z",
-      "to": "[P{x:-525,y:-245}H{rot:0}C{color:#D9D6BD}F{length:1050,width:1}][P{x:-525,y:-99}H{rot:0}C{color:#D9D6BD}F{length:1050,width:1}][P{x:-525,y:47}H{rot:0}C{color:#D9D6BD}F{length:1050,width:1}][P{x:-525,y:193}H{rot:0}C{color:#D9D6BD}F{length:1050,width:1}][P{x:-530,y:floor_y-2}H{rot:0}C{color:#AAA487}F{length:1060,width:2}]"
+      "to": "[P{x:-525,y:screen()[1]/2+(-245)}H{rot:0}C{color:#D9D6BD}F{length:1050,width:1}][P{x:-525,y:screen()[1]/2+(-99)}H{rot:0}C{color:#D9D6BD}F{length:1050,width:1}][P{x:-525,y:screen()[1]/2+(47)}H{rot:0}C{color:#D9D6BD}F{length:1050,width:1}][P{x:-525,y:screen()[1]/2+(193)}H{rot:0}C{color:#D9D6BD}F{length:1050,width:1}][P{x:-530,y:screen()[1]/2+(floor_y-2)}H{rot:0}C{color:#AAA487}F{length:1060,width:2}]"
     },
     {
       "name": "Root bud",
       "from": "S",
-      "to": "[P{x:0,y:floor_y}O{r:4,c:#70523E}]"
+      "to": "[P{x:0,y:screen()[1]/2+(floor_y)}O{r:4,c:#70523E}]"
     },
     {
       "name": "Growing leader",
       "from": "T",
-      "to": "[P{x:cx(i),y:cy(i)}C{color:#88724C}D{x:cx(i+p/6),y:cy(i+p/6),width:7-i*0.56}]"
+      "to": "[P{x:cx(i),y:screen()[1]/2+(cy(i))}C{color:#88724C}D{x:cx(i+p/6),y:screen()[1]/2+(cy(i+p/6)),width:7-i*0.56}]"
     },
     {
       "name": "Aged central cane",
       "from": "B",
-      "to": "[P{x:x,y:y}C{color:#735940}D{x:ex,y:ey,width:w+extra}][P{x:x+1.5,y:y}C{color:#A58A60}D{x:ex+1.5,y:ey,width:1.2}]",
+      "to": "[P{x:x,y:screen()[1]/2+(y)}C{color:#735940}D{x:ex,y:screen()[1]/2+(ey),width:w+extra}][P{x:x+1.5,y:screen()[1]/2+(y)}C{color:#A58A60}D{x:ex+1.5,y:screen()[1]/2+(ey),width:1.2}]",
       "locals": {
         "extra": "min(5,(gen()-born)*0.09)"
       }
@@ -157,7 +158,7 @@
     {
       "name": "Green advancing tip",
       "from": "A",
-      "to": "[P{x:ax(i,x,side,q),y:ay(i,y,q,rise)}C{color:#8AA758}D{x:tx,y:ty,width:2}O{r:2,c:#A4B969}]",
+      "to": "[P{x:ax(i,x,side,q),y:screen()[1]/2+(ay(i,y,q,rise))}C{color:#8AA758}D{x:tx,y:screen()[1]/2+(ty),width:2}O{r:2,c:#A4B969}]",
       "locals": {
         "u": "i+(p+1)/ticks",
         "tx": "ax(u,x,side,q)",
@@ -167,7 +168,7 @@
     {
       "name": "Leaf-bearing cane",
       "from": "V",
-      "to": "[P{x:x,y:y}C{color:bark}D{x:ex,y:ey,width:width}[H{rot:ang}N{s:s,c:c1}][H{rot:ang+153}N{s:s*0.88,c:c2}][P{x:(x+ex)/2,y:(y+ey)/2}H{rot:ang+68}N{s:s*0.82,c:c2}]]",
+      "to": "[P{x:x,y:screen()[1]/2+(y)}C{color:bark}D{x:ex,y:screen()[1]/2+(ey),width:width}[H{rot:ang}N{s:s,c:c1}][H{rot:ang+153}N{s:s*0.88,c:c2}][P{x:(x+ex)/2,y:screen()[1]/2+((y+ey)/2)}H{rot:ang+68}N{s:s*0.82,c:c2}]]",
       "locals": {
         "age": "gen()-born",
         "s": "leaf_scale*(20+9*q+4*wave(i/5+q))*min(1,0.12+age/12)",
@@ -196,7 +197,7 @@
     {
       "name": "Tendril unrolls",
       "from": "Y",
-      "to": "[P{x:x,y:y}H{rot:a}K{n:n,l:3.2,turn:side*10}]",
+      "to": "[P{x:x,y:screen()[1]/2+(y)}H{rot:a}K{n:n,l:3.2,turn:side*10}]",
       "locals": {
         "n": "min(31,1+gen()-born)"
       }
@@ -209,7 +210,7 @@
     {
       "name": "Pendulous grape bunch",
       "from": "J",
-      "to": "[P{x:x,y:y}H{rot:260}C{color:#796E49}F{length:7,width:1.3}][P{x:x+(-5)*z,y:y-7-(3)*z}U{r:3.9*z,c:berry}][P{x:x+(2)*z,y:y-7-(2)*z}U{r:3.9*z,c:berry}][P{x:x+(7)*z,y:y-7-(6)*z}U{r:3.9*z,c:berry}][P{x:x+(-8)*z,y:y-7-(9)*z}U{r:3.9*z,c:berry}][P{x:x+(-1)*z,y:y-7-(9)*z}U{r:3.9*z,c:berry}][P{x:x+(4)*z,y:y-7-(12)*z}U{r:3.9*z,c:berry}][P{x:x+(-5)*z,y:y-7-(15)*z}U{r:3.9*z,c:berry}][P{x:x+(1)*z,y:y-7-(17)*z}U{r:3.9*z,c:berry}][P{x:x+(-2)*z,y:y-7-(22)*z}U{r:3.9*z,c:berry}]",
+      "to": "[P{x:x,y:screen()[1]/2+(y)}H{rot:260}C{color:#796E49}F{length:7,width:1.3}][P{x:x+(-5)*z,y:screen()[1]/2+(y-7-(3)*z)}U{r:3.9*z,c:berry}][P{x:x+(2)*z,y:screen()[1]/2+(y-7-(2)*z)}U{r:3.9*z,c:berry}][P{x:x+(7)*z,y:screen()[1]/2+(y-7-(6)*z)}U{r:3.9*z,c:berry}][P{x:x+(-8)*z,y:screen()[1]/2+(y-7-(9)*z)}U{r:3.9*z,c:berry}][P{x:x+(-1)*z,y:screen()[1]/2+(y-7-(9)*z)}U{r:3.9*z,c:berry}][P{x:x+(4)*z,y:screen()[1]/2+(y-7-(12)*z)}U{r:3.9*z,c:berry}][P{x:x+(-5)*z,y:screen()[1]/2+(y-7-(15)*z)}U{r:3.9*z,c:berry}][P{x:x+(1)*z,y:screen()[1]/2+(y-7-(17)*z)}U{r:3.9*z,c:berry}][P{x:x+(-2)*z,y:screen()[1]/2+(y-7-(22)*z)}U{r:3.9*z,c:berry}]",
       "locals": {
         "age": "gen()-born",
         "z": "grape_scale*s*min(1,0.16+age/16)",

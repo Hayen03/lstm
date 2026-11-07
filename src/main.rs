@@ -1,13 +1,13 @@
 //! CLI orchestration for live viewing and headless PNG/GIF export.
 //! Generation zero is the axiom, so an export with N rewrites has N + 1 GIF frames.
 
-mod context;
-mod dessin;
+pub mod context;
+pub mod dessin;
 pub mod err;
-mod model;
-mod runtime;
-mod syntax;
-mod trace;
+pub mod model;
+pub mod runtime;
+pub mod syntax;
+pub mod trace;
 
 use crate::err::{Error, Result, ResultContext, ensure};
 use clap::Parser;

@@ -1,3 +1,4 @@
+// Canvas origin: bottom center. Geometry data stays center-relative; P/D add screen()[1]/2.
 {
   "name": "Drifting cells \u2014 growth, division and crowding",
   "description": "Stylised cells with persistent random motion, crowd-sensitive growth, cytokinesis and eventual death. Not a biological model.",
@@ -32,7 +33,7 @@
   "drawing": [
     {
       "from": "Z",
-      "to": "[P{x:-dish_x-22,y:-dish_y-22}H{rot:0}C{color:#295462}F{length:2*dish_x+44,width:2}R{deg:-90}F{length:2*dish_y+44,width:2}R{deg:-90}F{length:2*dish_x+44,width:2}R{deg:-90}F{length:2*dish_y+44,width:2}]"
+      "to": "[P{x:-dish_x-22,y:screen()[1]/2+(-dish_y-22)}H{rot:0}C{color:#295462}F{length:2*dish_x+44,width:2}R{deg:-90}F{length:2*dish_y+44,width:2}R{deg:-90}F{length:2*dish_x+44,width:2}R{deg:-90}F{length:2*dish_y+44,width:2}]"
     },
     {
       "from": "O",
@@ -48,7 +49,7 @@
         "record": "mark({'x':x,'y':y})",
         "shade": "#67BFA4 if a<max_age*0.75 else #829999"
       },
-      "to": "[P{x:x,y:y}K{r:r,c:shade}]"
+      "to": "[P{x:x,y:screen()[1]/2+(y)}K{r:r,c:shade}]"
     },
     {
       "from": "J",
@@ -57,11 +58,11 @@
         "sep": "birth_size*t/split_time",
         "rad": "mature+(birth_size-mature)*t/split_time"
       },
-      "to": "[P{x:x-sep if axis==0 else x,y:y-sep if axis==1 else y}K{r:rad,c:#87CFB0}][P{x:x+sep if axis==0 else x,y:y+sep if axis==1 else y}K{r:rad,c:#87CFB0}]"
+      "to": "[P{x:x-sep if axis==0 else x,y:screen()[1]/2+(y-sep if axis==1 else y)}K{r:rad,c:#87CFB0}][P{x:x+sep if axis==0 else x,y:screen()[1]/2+(y+sep if axis==1 else y)}K{r:rad,c:#87CFB0}]"
     },
     {
       "from": "E",
-      "to": "[P{x:x,y:y}O{r:max(0.2,r*(1-t/14)),c:#45616A}]"
+      "to": "[P{x:x,y:screen()[1]/2+(y)}O{r:max(0.2,r*(1-t/14)),c:#45616A}]"
     }
   ],
   "rules": [

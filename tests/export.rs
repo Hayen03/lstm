@@ -1,6 +1,25 @@
 use std::{fs, path::Path, process::Command};
 use tempfile::tempdir;
 
+#[test]
+fn absolute_coordinates_use_the_bottom_center_origin() -> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempdir()?;
+    let model = dir.path().join("origin.lstm");
+    let output = dir.path().join("origin.png");
+    fs::write(
+        &model,
+        r##"{axiom:"P{x:0,y:6}H{rot:0}C{color:#ff0000}F{length:8,width:2}"}"##,
+    )?;
+    render(&model, &output)?;
+    let pixels = tiny_skia::Pixmap::load_png(output)?;
+    // Canvas is 96x64: x=0 is its horizontal center, y=6 is six pixels up.
+    let bottom = pixels.pixel(52, 58).unwrap();
+    assert!(bottom.red() > 240 && bottom.green() < 10);
+    let former_center = pixels.pixel(52, 26).unwrap();
+    assert_eq!(former_center.green(), 255);
+    Ok(())
+}
+
 fn render(model: &Path, out: &Path) -> Result<(), Box<dyn std::error::Error>> {
     let result = Command::new(env!("CARGO_BIN_EXE_lstm"))
         .arg(model)

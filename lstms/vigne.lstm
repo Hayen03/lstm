@@ -1,3 +1,4 @@
+// Canvas origin: bottom center. Geometry data stays center-relative; P/D add screen()[1]/2.
 // Rameau de vigne ornemental : tiges en volutes, feuilles de vigne lobées,
 // vrilles enroulées terminées par une perle. Palette vert olive / jaune-vert.
 {
@@ -8,11 +9,11 @@
 
   // Trois tiges partent du bas : une sombre et épaisse, une olive, une claire
   // qui s'enroule vers la droite. P et H placent chaque départ.
-  axiom: "[C{color: #27320E}P{y: -280}H{rot: 125}\
+  axiom: "[C{color: #27320E}P{y: screen()[1]/2+(-280)}H{rot: 125}\
             A{n: 30, l: 17, w: 11, k: 1.0, c: #27320E}]\
-          [C{color: #7B8122}P{x: 12, y: -280}H{rot: 112}\
+          [C{color: #7B8122}P{x: 12, y: screen()[1]/2+(-280)}H{rot: 112}\
             A{n: 24, l: 15, w: 6, k: 1.3, c: #7B8122}]\
-          [C{color: #A9A644}P{x: 22, y: -280}H{rot: 40}\
+          [C{color: #A9A644}P{x: 22, y: screen()[1]/2+(-280)}H{rot: 40}\
             A{n: 14, l: 13, w: 4, k: -1.4, c: #A9A644}]",
 
   symbols: [

@@ -1,3 +1,4 @@
+// Canvas origin: bottom center. Geometry data stays center-relative; P/D add screen()[1]/2.
 // One seed. The growth rules sample every axis, bend and fork.
 {
   "name": "Crookwood \u2014 from one seed",
@@ -173,7 +174,7 @@
     {
       "name": "Seed",
       "from": "S",
-      "to": "[P{x:0,y:ground}C{color:#65513E}L{size:3}]"
+      "to": "[P{x:0,y:screen()[1]/2+(ground)}C{color:#65513E}L{size:3}]"
     },
     {
       "name": "Extend visible wood",
@@ -204,17 +205,17 @@
     {
       "name": "Root collar bud",
       "from": "N",
-      "to": "[P{x:x,y:y}C{color:#584435}L{size:1.4}]"
+      "to": "[P{x:x,y:screen()[1]/2+(y)}C{color:#584435}L{size:1.4}]"
     },
     {
       "name": "Resting terminal bud",
       "from": "T",
-      "to": "[P{x:x,y:y}C{color:#584435}L{size:0.9}]"
+      "to": "[P{x:x,y:screen()[1]/2+(y)}C{color:#584435}L{size:0.9}]"
     },
     {
       "name": "Follow the grain from end to end",
       "from": "g",
-      "to": "[P{x:sx-z1*v1/len1,y:sy+z1*h1/len1}C{color:c}D{x:ex-z2*v2/len2,y:ey+z2*h2/len2,width:max(0.5,wid*sw)}]g{x:x,y:y,dx:dx,dy:dy,nx:nx,ny:ny,k:k,w:w,q:q,t:t,n:n,c:c,lane:lane,sw:sw,j:j+1}",
+      "to": "[P{x:sx-z1*v1/len1,y:screen()[1]/2+(sy+z1*h1/len1)}C{color:c}D{x:ex-z2*v2/len2,y:screen()[1]/2+(ey+z2*h2/len2),width:max(0.5,wid*sw)}]g{x:x,y:y,dx:dx,dy:dy,nx:nx,ny:ny,k:k,w:w,q:q,t:t,n:n,c:c,lane:lane,sw:sw,j:j+1}",
       "cond": "j/n<t && (sw==1 || w>=4)",
       "locals": {
         "u": "j/n",

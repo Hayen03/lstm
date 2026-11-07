@@ -1311,7 +1311,7 @@ mod tests {
             1,
             true,
         )?;
-        assert_eq!(frames[1][1].args["y"], V::Float(-292.));
+        assert_eq!(frames[1][1].args["y"], V::Float(8.));
         Ok(())
     }
 }

@@ -80,7 +80,7 @@ impl Dessin {
     /// The current pen color is reset to black.
     /// The pen width is reset to 1.
     pub fn reset(&mut self) {
-        self.pose.p = (0., -(self.height as f64) / 2.);
+        self.pose.p = (0., 0.);
         self.pose.heading = 90.;
         self.pose.width = 1.;
         self.stack.clear();
@@ -185,7 +185,7 @@ impl Dessin {
         let xy = |(x, y): Point| {
             (
                 (x + self.width as f64 / 2.) as f32,
-                (self.height as f64 / 2. - y) as f32,
+                (self.height as f64 - y) as f32,
             )
         };
         canvas.fill(color(self.background));

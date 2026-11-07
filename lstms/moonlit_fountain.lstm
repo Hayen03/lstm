@@ -1,3 +1,4 @@
+// Canvas origin: bottom center. Geometry data stays center-relative; P/D add screen()[1]/2.
 // Requires --animate: live turtle functions are used.
 {
   "name": "Moonlit fountain",
@@ -6,7 +7,7 @@
   "globals": {
     "floor": "-215"
   },
-  "axiom": "P{x:-260,y:floor}H{rot:0}C{color:#27445C}F{length:520,width:8}P{x:0,y:-195}H{rot:90}C{color:#647F91}F{length:38,width:35}[P{x:-100,y:-180}C{color:#476C85}(D{x:-78,y:-222,width:1}D{x:78,width:1}D{x:100,y:-180,width:1}D{x:-100,width:1})C{color:#83BDCD}D{x:100,width:5}][H{rot: 60.0}E{a:0,vx:-6.800000000000001,vy:16.6}][H{rot: 61.5}E{a:8,vx:-6.460000000000001,vy:16.72}][H{rot: 63.0}E{a:7,vx:-6.12,vy:16.84}][H{rot: 64.5}E{a:6,vx:-5.78,vy:16.96}][H{rot: 66.0}E{a:5,vx:-5.44,vy:17.08}][H{rot: 67.5}E{a:4,vx:-5.1000000000000005,vy:17.2}][H{rot: 69.0}E{a:3,vx:-4.760000000000001,vy:17.32}][H{rot: 70.5}E{a:2,vx:-4.42,vy:17.44}][H{rot: 72.0}E{a:1,vx:-4.08,vy:17.56}][H{rot: 73.5}E{a:0,vx:-3.74,vy:17.68}][H{rot: 75.0}E{a:8,vx:-3.4000000000000004,vy:17.8}][H{rot: 76.5}E{a:7,vx:-3.06,vy:17.92}][H{rot: 78.0}E{a:6,vx:-2.72,vy:18.04}][H{rot: 79.5}E{a:5,vx:-2.3800000000000003,vy:18.16}][H{rot: 81.0}E{a:4,vx:-2.04,vy:18.28}][H{rot: 82.5}E{a:3,vx:-1.7000000000000002,vy:18.4}][H{rot: 84.0}E{a:2,vx:-1.36,vy:18.52}][H{rot: 85.5}E{a:1,vx:-1.02,vy:18.64}][H{rot: 87.0}E{a:0,vx:-0.68,vy:18.76}][H{rot: 88.5}E{a:8,vx:-0.34,vy:18.88}][H{rot: 90.0}E{a:7,vx:0.0,vy:19.0}][H{rot: 91.5}E{a:6,vx:0.34,vy:18.88}][H{rot: 93.0}E{a:5,vx:0.68,vy:18.76}][H{rot: 94.5}E{a:4,vx:1.02,vy:18.64}][H{rot: 96.0}E{a:3,vx:1.36,vy:18.52}][H{rot: 97.5}E{a:2,vx:1.7000000000000002,vy:18.4}][H{rot: 99.0}E{a:1,vx:2.04,vy:18.28}][H{rot: 100.5}E{a:0,vx:2.3800000000000003,vy:18.16}][H{rot: 102.0}E{a:8,vx:2.72,vy:18.04}][H{rot: 103.5}E{a:7,vx:3.06,vy:17.92}][H{rot: 105.0}E{a:6,vx:3.4000000000000004,vy:17.8}][H{rot: 106.5}E{a:5,vx:3.74,vy:17.68}][H{rot: 108.0}E{a:4,vx:4.08,vy:17.56}][H{rot: 109.5}E{a:3,vx:4.42,vy:17.44}][H{rot: 111.0}E{a:2,vx:4.760000000000001,vy:17.32}][H{rot: 112.5}E{a:1,vx:5.1000000000000005,vy:17.2}][H{rot: 114.0}E{a:0,vx:5.44,vy:17.08}][H{rot: 115.5}E{a:8,vx:5.78,vy:16.96}][H{rot: 117.0}E{a:7,vx:6.12,vy:16.84}][H{rot: 118.5}E{a:6,vx:6.460000000000001,vy:16.72}][H{rot: 120.0}E{a:5,vx:6.800000000000001,vy:16.6}]",
+  "axiom": "P{x:-260,y:screen()[1]/2+(floor)}H{rot:0}C{color:#27445C}F{length:520,width:8}P{x:0,y:screen()[1]/2+(-195)}H{rot:90}C{color:#647F91}F{length:38,width:35}[P{x:-100,y:screen()[1]/2+(-180)}C{color:#476C85}(D{x:-78,y:screen()[1]/2+(-222),width:1}D{x:78,width:1}D{x:100,y:screen()[1]/2+(-180),width:1}D{x:-100,width:1})C{color:#83BDCD}D{x:100,width:5}][H{rot: 60.0}E{a:0,vx:-6.800000000000001,vy:16.6}][H{rot: 61.5}E{a:8,vx:-6.460000000000001,vy:16.72}][H{rot: 63.0}E{a:7,vx:-6.12,vy:16.84}][H{rot: 64.5}E{a:6,vx:-5.78,vy:16.96}][H{rot: 66.0}E{a:5,vx:-5.44,vy:17.08}][H{rot: 67.5}E{a:4,vx:-5.1000000000000005,vy:17.2}][H{rot: 69.0}E{a:3,vx:-4.760000000000001,vy:17.32}][H{rot: 70.5}E{a:2,vx:-4.42,vy:17.44}][H{rot: 72.0}E{a:1,vx:-4.08,vy:17.56}][H{rot: 73.5}E{a:0,vx:-3.74,vy:17.68}][H{rot: 75.0}E{a:8,vx:-3.4000000000000004,vy:17.8}][H{rot: 76.5}E{a:7,vx:-3.06,vy:17.92}][H{rot: 78.0}E{a:6,vx:-2.72,vy:18.04}][H{rot: 79.5}E{a:5,vx:-2.3800000000000003,vy:18.16}][H{rot: 81.0}E{a:4,vx:-2.04,vy:18.28}][H{rot: 82.5}E{a:3,vx:-1.7000000000000002,vy:18.4}][H{rot: 84.0}E{a:2,vx:-1.36,vy:18.52}][H{rot: 85.5}E{a:1,vx:-1.02,vy:18.64}][H{rot: 87.0}E{a:0,vx:-0.68,vy:18.76}][H{rot: 88.5}E{a:8,vx:-0.34,vy:18.88}][H{rot: 90.0}E{a:7,vx:0.0,vy:19.0}][H{rot: 91.5}E{a:6,vx:0.34,vy:18.88}][H{rot: 93.0}E{a:5,vx:0.68,vy:18.76}][H{rot: 94.5}E{a:4,vx:1.02,vy:18.64}][H{rot: 96.0}E{a:3,vx:1.36,vy:18.52}][H{rot: 97.5}E{a:2,vx:1.7000000000000002,vy:18.4}][H{rot: 99.0}E{a:1,vx:2.04,vy:18.28}][H{rot: 100.5}E{a:0,vx:2.3800000000000003,vy:18.16}][H{rot: 102.0}E{a:8,vx:2.72,vy:18.04}][H{rot: 103.5}E{a:7,vx:3.06,vy:17.92}][H{rot: 105.0}E{a:6,vx:3.4000000000000004,vy:17.8}][H{rot: 106.5}E{a:5,vx:3.74,vy:17.68}][H{rot: 108.0}E{a:4,vx:4.08,vy:17.56}][H{rot: 109.5}E{a:3,vx:4.42,vy:17.44}][H{rot: 111.0}E{a:2,vx:4.760000000000001,vy:17.32}][H{rot: 112.5}E{a:1,vx:5.1000000000000005,vy:17.2}][H{rot: 114.0}E{a:0,vx:5.44,vy:17.08}][H{rot: 115.5}E{a:8,vx:5.78,vy:16.96}][H{rot: 117.0}E{a:7,vx:6.12,vy:16.84}][H{rot: 118.5}E{a:6,vx:6.460000000000001,vy:16.72}][H{rot: 120.0}E{a:5,vx:6.800000000000001,vy:16.6}]",
   "symbols": [
     "O{r: 3, c: #FFFFFF}",
     "E{a:0,vx:1,vy:10}",
@@ -23,7 +24,7 @@
     },
     {
       "from": "U",
-      "to": "[P{x:x-vx*1.8,y:y-vy*1.8}O{r:1.4,c:#367F9F}P{x:x-vx,y:y-vy}O{r:2,c:#61C4DE}P{x:x,y:y}H{rot:h}O{r:3,c:#D7FCFF}]"
+      "to": "[P{x:x-vx*1.8,y:screen()[1]/2+(y-vy*1.8)}O{r:1.4,c:#367F9F}P{x:x-vx,y:screen()[1]/2+(y-vy)}O{r:2,c:#61C4DE}P{x:x,y:screen()[1]/2+(y)}H{rot:h}O{r:3,c:#D7FCFF}]"
     }
   ],
   "rules": [
@@ -34,7 +35,7 @@
     },
     {
       "from": "E",
-      "to": "U{x:pos()[0],y:pos()[1],vx:vx,vy:vy,h:heading()}",
+      "to": "U{x:pos()[0],y:(pos()[1]-screen()[1]/2),vx:vx,vy:vy,h:heading()}",
       "cond": "a>=8"
     },
     {

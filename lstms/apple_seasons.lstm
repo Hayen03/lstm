@@ -1,3 +1,4 @@
+// Canvas origin: bottom center. Geometry data stays center-relative; P/D add screen()[1]/2.
 // Requires --animate: live turtle functions are used.
 {
   "name": "The returning orchard",
@@ -7,7 +8,7 @@
   "globals": {
     "ground": "-245"
   },
-  "axiom": "P{x: -275,y: ground}H{rot: 0}C{color: #415D47}F{length: 550,width: 5}P{x: 0}H{rot: 90}C{color: #725340}F{length: 105,width: 17}[R{deg: -29}C{color: #725340}F{length: 75.6,width: 11.22}[R{deg: -29}C{color: #725340}F{length: 54.431999999999995,width: 7.405200000000001}[R{deg: -29}C{color: #725340}F{length: 39.191039999999994,width: 4.887432}[R{deg: -29}C{color: #725340}F{length: 28.217548799999996,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 4}][R{deg: 32}C{color: #725340}F{length: 30.177100799999995,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 3}]][R{deg: 32}C{color: #725340}F{length: 41.912639999999996,width: 4.887432}[R{deg: -29}C{color: #725340}F{length: 30.177100799999995,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 2}][R{deg: 32}C{color: #725340}F{length: 32.2727328,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 1}]]][R{deg: 32}C{color: #725340}F{length: 58.211999999999996,width: 7.405200000000001}[R{deg: -29}C{color: #725340}F{length: 41.912639999999996,width: 4.887432}[R{deg: -29}C{color: #725340}F{length: 30.177100799999995,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 0}][R{deg: 32}C{color: #725340}F{length: 32.2727328,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 4}]][R{deg: 32}C{color: #725340}F{length: 44.82324,width: 4.887432}[R{deg: -29}C{color: #725340}F{length: 32.2727328,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 3}][R{deg: 32}C{color: #725340}F{length: 34.5138948,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 2}]]]][R{deg: 32}C{color: #725340}F{length: 80.85000000000001,width: 11.22}[R{deg: -29}C{color: #725340}F{length: 58.212,width: 7.405200000000001}[R{deg: -29}C{color: #725340}F{length: 41.91264,width: 4.887432}[R{deg: -29}C{color: #725340}F{length: 30.1771008,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 1}][R{deg: 32}C{color: #725340}F{length: 32.2727328,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 0}]][R{deg: 32}C{color: #725340}F{length: 44.823240000000006,width: 4.887432}[R{deg: -29}C{color: #725340}F{length: 32.2727328,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 4}][R{deg: 32}C{color: #725340}F{length: 34.5138948,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 3}]]][R{deg: 32}C{color: #725340}F{length: 62.25450000000001,width: 7.405200000000001}[R{deg: -29}C{color: #725340}F{length: 44.823240000000006,width: 4.887432}[R{deg: -29}C{color: #725340}F{length: 32.2727328,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 2}][R{deg: 32}C{color: #725340}F{length: 34.5138948,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 1}]][R{deg: 32}C{color: #725340}F{length: 47.93596500000001,width: 4.887432}[R{deg: -29}C{color: #725340}F{length: 34.5138948,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 0}][R{deg: 32}C{color: #725340}F{length: 36.910693050000006,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 4}]]]]",
+  "axiom": "P{x: -275,y: screen()[1]/2+(ground)}H{rot: 0}C{color: #415D47}F{length: 550,width: 5}P{x: 0}H{rot: 90}C{color: #725340}F{length: 105,width: 17}[R{deg: -29}C{color: #725340}F{length: 75.6,width: 11.22}[R{deg: -29}C{color: #725340}F{length: 54.431999999999995,width: 7.405200000000001}[R{deg: -29}C{color: #725340}F{length: 39.191039999999994,width: 4.887432}[R{deg: -29}C{color: #725340}F{length: 28.217548799999996,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 4}][R{deg: 32}C{color: #725340}F{length: 30.177100799999995,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 3}]][R{deg: 32}C{color: #725340}F{length: 41.912639999999996,width: 4.887432}[R{deg: -29}C{color: #725340}F{length: 30.177100799999995,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 2}][R{deg: 32}C{color: #725340}F{length: 32.2727328,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 1}]]][R{deg: 32}C{color: #725340}F{length: 58.211999999999996,width: 7.405200000000001}[R{deg: -29}C{color: #725340}F{length: 41.912639999999996,width: 4.887432}[R{deg: -29}C{color: #725340}F{length: 30.177100799999995,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 0}][R{deg: 32}C{color: #725340}F{length: 32.2727328,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 4}]][R{deg: 32}C{color: #725340}F{length: 44.82324,width: 4.887432}[R{deg: -29}C{color: #725340}F{length: 32.2727328,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 3}][R{deg: 32}C{color: #725340}F{length: 34.5138948,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 2}]]]][R{deg: 32}C{color: #725340}F{length: 80.85000000000001,width: 11.22}[R{deg: -29}C{color: #725340}F{length: 58.212,width: 7.405200000000001}[R{deg: -29}C{color: #725340}F{length: 41.91264,width: 4.887432}[R{deg: -29}C{color: #725340}F{length: 30.1771008,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 1}][R{deg: 32}C{color: #725340}F{length: 32.2727328,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 0}]][R{deg: 32}C{color: #725340}F{length: 44.823240000000006,width: 4.887432}[R{deg: -29}C{color: #725340}F{length: 32.2727328,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 4}][R{deg: 32}C{color: #725340}F{length: 34.5138948,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 3}]]][R{deg: 32}C{color: #725340}F{length: 62.25450000000001,width: 7.405200000000001}[R{deg: -29}C{color: #725340}F{length: 44.823240000000006,width: 4.887432}[R{deg: -29}C{color: #725340}F{length: 32.2727328,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 2}][R{deg: 32}C{color: #725340}F{length: 34.5138948,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 1}]][R{deg: 32}C{color: #725340}F{length: 47.93596500000001,width: 4.887432}[R{deg: -29}C{color: #725340}F{length: 34.5138948,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 0}][R{deg: 32}C{color: #725340}F{length: 36.910693050000006,width: 3.2257051200000006}[R{deg: -40}V{s: 19}][R{deg: 60}V{s: 14}]B{a: 4}]]]]",
   "symbols": [
     "O{r: 3, c: #FFFFFF}",
     "V{s: 12}",
@@ -50,7 +51,7 @@
     },
     {
       "from": "G",
-      "to": "[P{y: ground+max(1,8.6-a*0.65)}J{r: max(1,8.6-a*0.65)}]"
+      "to": "[P{y: screen()[1]/2+(ground+max(1,8.6-a*0.65))}J{r: max(1,8.6-a*0.65)}]"
     },
     {
       "from": "w",
@@ -81,12 +82,12 @@
     {
       "from": "T",
       "to": "G{a:0}",
-      "cond": "d>=(let p = pos() ?? [0.0, 0.0] for p[1]-ground-8.6)"
+      "cond": "d>=(let p = (let p = pos() for [p[0],p[1]-screen()[1]/2]) ?? [0.0, 0.0] for p[1]-ground-8.6)"
     },
     {
       "from": "T",
-      "to": "T{d:min(d+v,let p = pos() ?? [0.0, 0.0] for p[1]-ground-8.6),v:v+1.6}",
-      "cond": "d<(let p = pos() ?? [0.0, 0.0] for p[1]-ground-8.6)"
+      "to": "T{d:min(d+v,let p = (let p = pos() for [p[0],p[1]-screen()[1]/2]) ?? [0.0, 0.0] for p[1]-ground-8.6),v:v+1.6}",
+      "cond": "d<(let p = (let p = pos() for [p[0],p[1]-screen()[1]/2]) ?? [0.0, 0.0] for p[1]-ground-8.6)"
     },
     {
       "from": "G",
