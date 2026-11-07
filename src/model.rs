@@ -113,35 +113,24 @@ impl Model {
             .with_globals(env.clone());
 
         let mut defs: Args = IndexMap::new();
-        for (k, v) in s.globals
-            .into_iter()
-            .map(|(k, v)| (k.into(), {
-                let form = formula(v);
-                formulas::parse_next(&form).map(|(expr, idx)| {
-                    if form[idx..].trim_start().is_empty() {
-                        Ok(expr)
-                    } else {
-                        Err(crate::Error::TrailingInput(form))
-                    }
-                })
-            })) {
-            let value = v??;
-            defs.insert(k, value.into());
+        for (name, value) in s.globals {
+            let expr =
+                expression(&formula(value)).with_context(|| format!("Parsing global {name}"))?;
+            defs.insert(name.into(), expr.into());
         }
         let g = globals.trim();
-        defs.extend(args(
-            g.strip_prefix('{')
-                .and_then(|v| v.strip_suffix('}'))
-                .unwrap_or(g),
-        )?);
+        defs.extend(
+            args(
+                g.strip_prefix('{')
+                    .and_then(|v| v.strip_suffix('}'))
+                    .unwrap_or(g),
+            )
+            .context("Parsing CLI globals")?,
+        );
         // Evaluate each definition once, in declaration order. Function bodies
         // run only when called and resolve globals through the engine normally.
         for (name, source) in defs {
-            let Arg::Expr(source) = source else {
-                return Err(Error::InvalidJoker);
-            };
-            let value = engine
-                .evalexpr(&source, &Env::new())
+            let value = argument_value(&source, &mut engine, &Env::new())
                 .with_context(|| format!("global {name}"))?;
             env.insert(name, value);
             engine = engine.with_globals(env.clone());
@@ -162,7 +151,8 @@ impl Model {
         let height = setting("height", s.height, 800)?;
         let mut symbols = HashMap::new();
         for declaration in s.symbols {
-            let core = single(&declaration)?;
+            let core = single(&declaration)
+                .with_context(|| format!("Parsing symbol declaration {declaration:?}"))?;
             ensure!(
                 !DRAW.contains(core.ch.as_ref()) && !"[]".contains(core.ch.as_ref()),
                 SyntaxError::ReservedSymbol { symbol: core.ch }
@@ -174,15 +164,15 @@ impl Model {
                 },
             );
         }
-        let axiom = word(override_axiom.unwrap_or(&s.axiom))?;
+        let axiom = word(override_axiom.unwrap_or(&s.axiom)).context("Parsing axiom")?;
         Ok(Self {
             name: s.name,
             iterations: s.recommended_iterations.unwrap_or(5),
             bg,
             axiom: axiom.into(),
             symbols: Arc::new(symbols),
-            rules: parse_rules(s.rules)?.into(),
-            drawing: parse_rules(s.drawing)?,
+            rules: parse_rules(s.rules, "growth")?.into(),
+            drawing: parse_rules(s.drawing, "drawing")?,
             width,
             height,
             engine,
@@ -241,61 +231,52 @@ impl Model {
     }
 }
 
-fn parse_rules(source: Vec<RuleSource>) -> Result<Vec<Rule>> {
-    let mut rules = Vec::new();
-    for (i, r) in source.into_iter().enumerate() {
-        let (l, core, h) = predecessor(&r.from)?;
-        let left = l.map(Pattern::parse).transpose()?;
-        let right = h.map(Pattern::parse).transpose()?;
-        let specificity = r
-            .specificity
-            .unwrap_or(core.args.len() as i64 + left.is_some() as i64 + right.is_some() as i64);
-        let weight = r.weight.unwrap_or(1.);
-        ensure!(
-            weight >= 0. && weight.is_finite(),
-            Error::InvalidRuleWeight { weight }
-        );
-        let mut locals: Args = IndexMap::new();
-        for (k, v) in r.locals
-            .into_iter()
-            .map(|(k, v)| (k.into(), {
-                let form = formula(v);
-                formulas::parse_next(&form).map(|(expr, idx)| {
-                    if !form[idx..].trim().is_empty() {
-                        Err(crate::Error::TrailingInput(form.clone()))
-                    } else {
-                        Ok(expr)
-                    }
+/// Attach field and rule identities at load time, before any generation runs.
+fn parse_rules(source: Vec<RuleSource>, phase: &str) -> Result<Vec<Rule>> {
+    source
+        .into_iter()
+        .enumerate()
+        .map(|(i, r)| {
+            let name = r.name.unwrap_or_else(|| format!("rule[{i}]"));
+            (|| -> Result<Rule> {
+                let (l, core, h) = predecessor(&r.from).context("field from")?;
+                let left = l.map(Pattern::parse).transpose().context("left context")?;
+                let right = h.map(Pattern::parse).transpose().context("right context")?;
+                let specificity = r.specificity.unwrap_or(
+                    core.args.len() as i64 + left.is_some() as i64 + right.is_some() as i64,
+                );
+                let weight = r.weight.unwrap_or(1.);
+                ensure!(
+                    weight >= 0. && weight.is_finite(),
+                    Error::InvalidRuleWeight { weight }
+                );
+                let mut locals = Args::new();
+                for (key, value) in r.locals {
+                    let expr =
+                        expression(&formula(value)).with_context(|| format!("local {key}"))?;
+                    locals.insert(key.into(), expr.into());
+                }
+                let cond = r
+                    .cond
+                    .map(|value| expression(&formula(value)))
+                    .transpose()
+                    .context("field cond")?;
+                let out = word(&r.to).context("field to")?;
+                Ok(Rule {
+                    locals,
+                    core,
+                    left,
+                    right,
+                    cond,
+                    out,
+                    weight,
+                    specificity,
+                    name: name.clone(),
                 })
-            })) {
-            let v = v??;
-            locals.insert(k, v.into());
-        }
-        rules.push(Rule {
-            locals,
-            core,
-            left,
-            right,
-            weight,
-            specificity,
-            cond: r.cond
-                .map(|c| {
-                    let form = formula(c);
-                    formulas::parse_next(&form).map(|(expr, idx)| {
-                        if !form[idx..].trim().is_empty() {
-                            Err(crate::Error::TrailingInput(form.clone()))
-                        } else {
-                            Ok(expr)
-                        }
-                    })
-                })
-                .transpose()?
-                .transpose()?,
-            name: r.name.unwrap_or_else(|| format!("rule[{i}]")),
-            out: word(&r.to)?,
+            })()
+            .with_context(|| format!("Parsing {phase} rule {name} (index {i})"))
         })
-    }
-    Ok(rules)
+        .collect()
 }
 
 fn trace_queries(runtime: &Runtime, tr: &mut Trace, phase: &str) -> Result<()> {
@@ -358,7 +339,9 @@ fn constraints(
         let Arg::Expr(expr) = expr else {
             continue;
         };
-        let expected = engine.evalexpr(expr, &env)?;
+        let expected = engine
+            .evalexpr(expr, &env)
+            .with_context(|| format!("constraint {}.{k}, formula {expr}", pattern.ch))?;
         trace_queries(runtime, tr, phase)?;
         tr.event(
             phase,
@@ -395,6 +378,16 @@ fn constraints(
     }
     Ok(true)
 }
+/// A joker is legal only in a pattern, never as an evaluated argument or local.
+fn argument_value(arg: &Arg, engine: &mut FormulaEngine, env: &Env) -> Result<V> {
+    match arg {
+        Arg::Expr(expr) => engine
+            .evalexpr(expr, env)
+            .with_context(|| format!("formula {expr}")),
+        Arg::Joker => Err(Error::InvalidJoker),
+    }
+}
+
 /// Resolves a template using symbol defaults, with explicit arguments overriding them.
 fn actualize(
     runtime: &Runtime,
@@ -420,12 +413,11 @@ fn actualize(
             .get(k)
             .or_else(|| defaults.and_then(|d| d.get(k)))
             .unwrap();
+        let v = argument_value(expr, engine, env)
+            .with_context(|| format!("{}, argument {}.{k}", tr.location(phase), t.ch))?;
         let Arg::Expr(expr) = expr else {
-            return Err(Error::InvalidJoker);
+            unreachable!("joker rejected above")
         };
-        let v = engine
-            .evalexpr(expr, env)
-            .with_context(|| format!("argument {}.{k}, generation {}", t.ch, tr.generation))?;
         trace_queries(runtime, tr, phase)?;
         tr.event(phase,"argument_evaluated",||json!({"argument":k.as_ref(),"formula":expr.to_string(),"value":display(&v),"target_symbol":t.ch}))?;
         values.insert(k.clone(), v);
@@ -471,7 +463,11 @@ fn select(
                 }
             }
             if let Some(cond) = &rule.cond {
-                let ok = boolean(engine.evalexpr(cond, &env)?)?;
+                let ok = engine
+                    .evalexpr(cond, &env)
+                    .map_err(Error::from)
+                    .and_then(boolean)
+                    .with_context(|| format!("condition {cond}"))?;
                 trace_queries(runtime, tr, phase)?;
                 tr.event(
                     phase,
@@ -539,12 +535,11 @@ fn bindings(
 ) -> Result<Env<'static>> {
     let mut env = Env::from_index_map(&token.args);
     for (name, expr) in &rule.locals {
+        let value = argument_value(expr, engine, &env)
+            .with_context(|| format!("{}, local {name}", tr.location(phase)))?;
         let Arg::Expr(expr) = expr else {
-            return Err(Error::InvalidJoker);
+            unreachable!("joker rejected above")
         };
-        let value = engine
-            .evalexpr(expr, &env)
-            .with_context(|| format!("{phase} rule {} local {name}", rule.name))?;
         trace_queries(runtime, tr, phase)?;
         tr.event(
             phase,
@@ -572,7 +567,9 @@ struct FrameWord {
     index: usize,
     pending: Option<Pending>,
     tokens: Vec<Token>,
-    buffer: VecDeque<Token>,
+    // Values are produced together, but missing defaults are evaluated only when
+    // each token is consumed. The pending rule retains their lexical environment.
+    buffer: VecDeque<SplicedToken>,
 }
 impl FrameWord {
     fn get(&mut self, at: usize, engine: &mut FormulaEngine) -> Result<Option<Token>> {
@@ -587,56 +584,76 @@ impl FrameWord {
 
     fn produce(&mut self, engine: &mut FormulaEngine) -> Result<Option<Token>> {
         let empty_env = Env::new();
-        if !self.buffer.is_empty() {
-            let mut tok = self.buffer.pop_front().unwrap();
-            actualize_spliced_token(&mut tok, &self.symbols, engine, &self.pending.as_ref().map(|p| &p.env).unwrap_or(&empty_env))?;
-            return Ok(Some(tok));
-        }
-        if let Some(axiom) = &self.axiom {
-            loop {
+        loop {
+            if let Some(item) = self.buffer.pop_front() {
+                let phase = if self.axiom.is_some() {
+                    "axiom"
+                } else {
+                    "growth"
+                };
+                if self.axiom.is_some() {
+                    self.trace.index = self.tokens.len();
+                    self.trace.symbol = item.token.ch.clone();
+                    self.trace.rule = None;
+                }
+                let env = self.pending.as_ref().map(|p| &p.env).unwrap_or(&empty_env);
+                return finish_spliced_token(
+                    item,
+                    &self.runtime,
+                    &self.symbols,
+                    engine,
+                    env,
+                    &mut self.trace,
+                    phase,
+                )
+                .map(Some);
+            }
+            if let Some(axiom) = &self.axiom {
                 let Some(t) = axiom.get(self.index) else {
                     return Ok(None);
                 };
+                let successor = self.index;
+                self.index += 1;
+                self.trace.index = self.tokens.len();
+                self.trace.rule = None;
                 match t {
                     DeferredToken::Literal(t) => {
-                        self.trace.index = self.index;
                         self.trace.symbol = t.ch.clone();
-                        self.index += 1;
                         return actualize(
                             &self.runtime,
                             &self.symbols,
                             engine,
                             t,
-                            &Env::new(),
+                            &empty_env,
                             &mut self.trace,
                             "axiom",
                         )
                         .map(Some);
-                    },
+                    }
                     DeferredToken::Func(expr) => {
-                        let mut tok = eval_spliced_expr(
-                            &mut self.index, 
-                            &mut self.buffer, 
-                            engine, 
+                        // An axiom splice has no predecessor symbol. Emitted tokens
+                        // below use their own symbol and actual output-word index.
+                        self.trace.symbol = "${}".into();
+                        self.buffer = eval_splice(
                             expr,
-                            &Env::new(),
+                            engine,
+                            &empty_env,
+                            &self.runtime,
+                            &mut self.trace,
+                            "axiom",
+                            successor,
                         )?;
-                        if let Some(tok) = &mut tok {
-                            actualize_spliced_token(tok, &self.symbols, engine, &self.pending.as_ref().map(|p| &p.env).unwrap_or(&empty_env))?;
-                        }
-                        if let Some(tok) = tok {
-                            return Ok(Some(tok));
-                        }
-                    },
+                        continue;
+                    }
                 }
             }
-        }
-        loop {
             if let Some(p) = &mut self.pending {
                 if let Some(template) = self.rules[p.rule].out.get(p.next) {
+                    let successor = p.next;
+                    // This cursor belongs to the replacement, not the previous word.
+                    p.next += 1;
                     match template {
                         DeferredToken::Literal(template) => {
-                            p.next += 1;
                             let t = actualize(
                                 &self.runtime,
                                 &self.symbols,
@@ -646,27 +663,24 @@ impl FrameWord {
                                 &mut self.trace,
                                 "growth",
                             )?;
-                            self.trace.event(
-                                "growth",
-                                "token_emitted",
-                                || json!({"output":display(&t.value())}),
-                            )?;
+                            self.trace.event("growth", "token_emitted", ||
+                                json!({"output":display(&t.value()),"successor_index":successor}))?;
                             return Ok(Some(t));
-                        },
+                        }
                         DeferredToken::Func(expr) => {
-                            let tok = eval_spliced_expr(
-                                &mut p.next, 
-                                &mut self.buffer, 
-                                engine, 
+                            self.buffer = eval_splice(
                                 expr,
+                                engine,
                                 &p.env,
+                                &self.runtime,
+                                &mut self.trace,
+                                "growth",
+                                successor,
                             )?;
-                            if let Some(mut tok) = tok {
-                                actualize_spliced_token(&mut tok, &self.symbols, engine, &p.env)?;
-                                return Ok(Some(tok));
-                            }
+                            // An empty expansion is not end-of-word: keep this rule
+                            // pending and proceed to its next successor.
                             continue;
-                        },
+                        }
                     }
                 }
                 self.pending = None;
@@ -714,20 +728,96 @@ impl FrameWord {
     }
 }
 
-fn eval_spliced_expr(frame_index: &mut usize, frame_buffer: &mut VecDeque<Token>, engine: &mut FormulaEngine, expr: &formulas::Expr, env: &Env) -> Result<Option<Token>> {
-    *frame_index += 1;
-    let value = engine.evalexpr(expr, env)?;
-    match value {
-        V::Array(arr) => {
-            let res = arr.into_iter().cloned().map(Token::try_from).collect::<Result<Vec<_>>>()?;
-            *frame_buffer = VecDeque::from(res);
-            return Ok(frame_buffer.pop_front());
-        },
-        other => {
-            let tok = Token::try_from(other)?;
-            return Ok(Some(tok));
-        },
-    }
+/// Keep origin metadata with buffered values so diagnostics and traces do not
+/// depend on when drawing or right-context lookahead happens to consume them.
+struct SplicedToken {
+    token: Token,
+    successor: usize,
+    element: usize,
+}
+
+/// Evaluate once, trace the original value, and convert every array element.
+/// Explicit arguments are already values; only missing defaults remain deferred.
+fn eval_splice(
+    expr: &formulas::Expr,
+    engine: &mut FormulaEngine,
+    env: &Env,
+    runtime: &Runtime,
+    tr: &mut Trace,
+    phase: &str,
+    successor: usize,
+) -> Result<VecDeque<SplicedToken>> {
+    (|| -> Result<VecDeque<SplicedToken>> {
+        let value = engine.evalexpr(expr, env)?;
+        trace_queries(runtime, tr, phase)?;
+        tr.event(phase, "splice_evaluated", || {
+            json!({
+                "formula":expr.to_string(), "value":display(&value),
+                "successor_index":successor,
+                "token_count":match &value { V::Array(a) => a.len(), _ => 1 },
+            })
+        })?;
+        let convert = |element, value| {
+            Token::try_from(value)
+                .map(|token| SplicedToken {
+                    token,
+                    successor,
+                    element,
+                })
+                .with_context(|| format!("splice element {element}"))
+        };
+        match value {
+            V::Array(values) => values
+                .iter()
+                .cloned()
+                .enumerate()
+                .map(|(i, value)| convert(i, value))
+                .collect(),
+            value => Ok(VecDeque::from([convert(0, value)?])),
+        }
+    })()
+    .with_context(|| {
+        format!(
+            "{}, successor {successor}, splice ${{{expr}}}",
+            tr.location(phase)
+        )
+    })
+}
+
+/// Apply defaults immediately before consumption, then trace the complete token.
+/// This preserves live turtle queries and skips defaults overridden by the splice.
+fn finish_spliced_token(
+    mut item: SplicedToken,
+    runtime: &Runtime,
+    symbols: &HashMap<Arc<str>, Symbol>,
+    engine: &mut FormulaEngine,
+    env: &Env,
+    tr: &mut Trace,
+    phase: &str,
+) -> Result<Token> {
+    (|| -> Result<()> {
+        if let Some(symbol) = symbols.get(&item.token.ch) {
+            for (key, arg) in &symbol.defaults {
+                if item.token.args.contains_key(key) { continue }
+                let value = argument_value(arg, engine, env)
+                    .with_context(|| format!("default argument {}.{key}", item.token.ch))?;
+                trace_queries(runtime, tr, phase)?;
+                tr.event(phase, "argument_evaluated", || json!({
+                    "argument":key.as_ref(), "formula":match arg { Arg::Expr(e) => e.to_string(), Arg::Joker => "_".into() },
+                    "value":display(&value), "target_symbol":item.token.ch,
+                    "source":"default", "successor_index":item.successor, "splice_index":item.element,
+                }))?;
+                item.token.args.insert(key.clone(), value);
+            }
+        }
+        tr.event(phase, "token_emitted", || json!({
+            "output":display(&item.token.value()), "spliced":true,
+            "successor_index":item.successor, "splice_index":item.element,
+        }))?;
+        Ok(())
+    })().with_context(|| format!("{}, successor {}, splice element {}",
+        tr.location(phase), item.successor, item.element))?;
+    Ok(item.token)
 }
 
 /// All recursive drawing children share this anchor. Only right-context reads
@@ -779,7 +869,8 @@ fn draw(
     let Some(i) = select(runtime, rules, token, engine, tr, "drawing")? else {
         if DRAW.contains(token.ch.as_ref()) || "[]".contains(token.ch.as_ref()) {
             tr.event("drawing","instruction",||json!({"instruction":token.ch,"arguments":display(&V::Object(token.args.clone().into()))}))?;
-            d.apply(token)?;
+            d.apply(token)
+                .with_context(|| format!("{}, instruction {}", tr.location("drawing"), token.ch))?;
             runtime.sync(d);
         }
         return Ok(());
@@ -803,55 +894,50 @@ fn draw(
         "symbol_expanded",
         || json!({"drawing_path":path.iter().map(|s| s.to_string()).collect::<Vec<_>>()}),
     )?;
-    for child in &rule.out {
-        let subs = match child {
+    for (successor, child) in rule.out.iter().enumerate() {
+        // Recursive children change the selected rule in the shared trace. Restore
+        // the parent's identity before each sibling and before each buffered token.
+        tr.rule = Some((i, rule.name.clone()));
+        match child {
             DeferredToken::Literal(template) => {
-                tr.rule = Some((i, rule.name.clone()));
                 let t = actualize(runtime, symbols, engine, template, &env, tr, "drawing")?;
-                vec![t]
-            },
-            DeferredToken::Func(expr) => actualize_spliced_tokens(expr, engine, &env)?,
-        };
-        
-        for mut t in subs {
-            actualize_spliced_token(&mut t, symbols, engine, &env)?;
-            draw(runtime, symbols, rules, engine, &t, d, tr, path)?;
+                draw(runtime, symbols, rules, engine, &t, d, tr, path)
+                    .map_err(|error| drawing_error(error, &rule.name, i, successor, None))?;
+            }
+            DeferredToken::Func(expr) => {
+                let items = eval_splice(expr, engine, &env, runtime, tr, "drawing", successor)?;
+                for item in items {
+                    tr.rule = Some((i, rule.name.clone()));
+                    let element = item.element;
+                    let t =
+                        finish_spliced_token(item, runtime, symbols, engine, &env, tr, "drawing")?;
+                    draw(runtime, symbols, rules, engine, &t, d, tr, path).map_err(|error| {
+                        drawing_error(error, &rule.name, i, successor, Some(element))
+                    })?;
+                }
+            }
         }
     }
     path.pop();
     Ok(())
 }
 
-fn actualize_spliced_tokens(expr: &formulas::Expr, engine: &mut FormulaEngine, env: &Env) -> Result<Vec<Token>> {
-    let value = engine.evalexpr(expr, &env)?;
-    let tokens = match value {
-        V::Array(arr) => {
-            arr.into_iter().cloned().map(Token::try_from).collect::<Result<Vec<_>>>()?
-        },
-        other => {
-            let tok = Token::try_from(other)?;
-            vec![tok]
-        },
-    };
-
-    // TODO add trace
-
-    Ok(tokens)
-}
-
-fn actualize_spliced_token(tok: &mut Token, symbols: &HashMap<Arc<str>, Symbol>, engine: &mut FormulaEngine, env: &Env) -> Result<()> {
-    if let Some(defaults) = symbols.get(&tok.ch).map(|s| &s.defaults) {
-        for (k, v) in defaults {
-            let Arg::Expr(def_expr) = v else {
-                return Err(Error::InvalidJoker);
-            };
-            if !tok.args.contains_key(k) {
-                let def_val = engine.evalexpr(def_expr, env)?;
-                tok.args.insert(k.clone(), def_val);
-            }
-        }
+/// Recursion errors already contain the full expansion path. Other failures gain
+/// the parent successor's identity, including errors raised by terminal primitives.
+fn drawing_error(
+    error: Error,
+    rule: &str,
+    index: usize,
+    successor: usize,
+    element: Option<usize>,
+) -> Error {
+    if matches!(error.without_context(), Error::DrawingRecursion { .. }) {
+        return error;
     }
-    Ok(())
+    let splice = element.map_or(String::new(), |i| format!(", splice element {i}"));
+    error.context(format!(
+        "drawing rule {rule} (index {index}), successor {successor}{splice}"
+    ))
 }
 
 #[cfg(test)]
@@ -952,12 +1038,12 @@ mod tests {
                 .expect("invalid model")
         };
         assert!(matches!(load_error("{"), Error::Json5(_)));
-        assert!(match load_error("{axiom:'+'}") {
+        assert!(match load_error("{axiom:'+'}").without_context() {
             Error::Syntax(SyntaxError::ReservedSymbol { symbol: s }) if s.as_ref() == "+" => true,
             _ => false,
         });
         assert!(matches!(
-            load_error("{rules:[{from:'A',weight:-1}]}"),
+            load_error("{rules:[{from:'A',weight:-1}]}").without_context(),
             Error::InvalidRuleWeight { weight: -1.0 }
         ));
         assert!(matches!(

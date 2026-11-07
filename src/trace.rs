@@ -91,6 +91,17 @@ impl Trace {
     pub fn enabled(&self) -> bool {
         self.sink.is_some()
     }
+    /// Diagnostic identity is available even when trace output is disabled.
+    /// During drawing, the token index and symbol identify the growth anchor.
+    pub fn location(&self, phase: &str) -> String {
+        let rule = self.rule.as_ref().map_or(String::new(), |(i, name)| {
+            format!(" rule {name} (index {i})")
+        });
+        format!(
+            "{phase}{rule}, generation {}, token {} ({})",
+            self.generation, self.index, self.symbol
+        )
+    }
     /// Writes one accepted event, adding the current generation and rule metadata.
     pub fn event(&mut self, phase: &str, event: &str, data: impl FnOnce() -> Value) -> Result<()> {
         let Some(out) = &mut self.sink else {

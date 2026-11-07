@@ -54,55 +54,83 @@ impl TryFrom<V> for Token {
     type Error = crate::Error;
     fn try_from(value: V) -> std::result::Result<Self, Self::Error> {
         match value {
-            V::String(s) => {
-                let raw = s.graphemes(true).next().ok_or_else(|| crate::Error::InvalidToken(s.to_string()))?;
-                let rest = &s[raw.len()..];
-                if !rest.is_empty() {
-                    return Err(crate::Error::InvalidToken(s.to_string()));
-                }
-                let ch: Arc<str> = if raw.is_ascii() {
-                    Arc::from(raw)
-                } else {
-                    raw.nfc().collect::<String>().into()
-                };
-                if META.contains(&*ch) || r#"{}:,"'"#.contains(ch.as_ref()) {
-                    return Err(crate::Error::InvalidToken(s.to_string()));
-                }
-                Ok(Token { ch, args: IndexMap::new() })
-            },
+            V::String(s) => Ok(Token {
+                ch: token_symbol(&s)?,
+                args: IndexMap::new(),
+            }),
             V::Object(data) => {
                 let ch = match data.get("symbol") {
-                    Some(V::String(s)) => {
-                        let raw = s.graphemes(true).next().ok_or_else(|| crate::Error::InvalidToken(s.to_string()))?;
-                        let rest = &s[raw.len()..];
-                        if !rest.is_empty() {
-                            return Err(crate::Error::InvalidToken(s.to_string()));
-                        }
-                        let ch: Arc<str> = if raw.is_ascii() {
-                            Arc::from(raw)
-                        } else {
-                            raw.nfc().collect::<String>().into()
-                        };
-                        if META.contains(&*ch) || r#"{}:,"'"#.contains(ch.as_ref()) {
-                            return Err(crate::Error::InvalidToken(s.to_string()));
-                        }
-                        ch
-                    },
-                    Some(other) => return Err(crate::Error::InvalidToken(format!("Expected a string for 'symbol', got {}", other.repr()))),
-                    None => return Err(crate::Error::InvalidToken("Missing 'symbol' field".into())),
+                    Some(V::String(s)) => token_symbol(s).context("token field symbol")?,
+                    Some(other) => {
+                        return Err(crate::Error::InvalidToken(format!(
+                            "Expected a string for 'symbol', got {}",
+                            other.repr()
+                        )));
+                    }
+                    None => {
+                        return Err(crate::Error::InvalidToken("Missing 'symbol' field".into()));
+                    }
                 };
                 let args = match data.get("args") {
                     Some(V::Object(map)) => map.as_ref().clone(),
-                    Some(other) => return Err(crate::Error::InvalidToken(format!("Expected an object for 'args', got {}", other.repr()))),
+                    Some(other) => {
+                        return Err(crate::Error::InvalidToken(format!(
+                            "Expected an object for 'args', got {}",
+                            other.repr()
+                        )));
+                    }
                     None => IndexMap::new(),
                 };
                 Ok(Token { ch, args })
-            },
-            other => Err(crate::Error::InvalidToken(format!("Expected a string or object, got {}", other.repr()))),
+            }
+            other => Err(crate::Error::InvalidToken(format!(
+                "Expected a string or object, got {}",
+                other.repr()
+            ))),
         }
     }
 }
 
+/// Formula-produced symbols obey the same restrictions as literal word symbols.
+/// Validate before NFC normalization, which can change the UTF-8 byte length.
+fn token_symbol(source: &str) -> Result<Arc<str>> {
+    let mut graphemes = source.graphemes(true);
+    let raw = graphemes.next().ok_or_else(|| {
+        crate::Error::InvalidToken(
+            "Expected exactly one grapheme cluster, got an empty symbol".into(),
+        )
+    })?;
+    ensure!(
+        graphemes.next().is_none(),
+        crate::Error::InvalidToken(format!(
+            "Expected exactly one grapheme cluster, got {source:?}"
+        ))
+    );
+    let ch: Arc<str> = raw.nfc().collect::<String>().into();
+    ensure!(
+        !reserved(&ch),
+        SyntaxError::ReservedSymbol { symbol: ch.clone() }
+    );
+    Ok(ch)
+}
+
+fn reserved(ch: &str) -> bool {
+    META.contains(ch) || r#"{}:,"'"#.contains(ch)
+}
+
+/// Parse one complete field, unlike `parse_next`, which also serves word boundaries.
+/// Reject trailing tokens but allow whitespace, including multibyte whitespace.
+pub fn expression(source: &str) -> Result<Expr> {
+    let (expr, end) = parse_next(source).with_context(|| format!("Parsing formula {source:?}"))?;
+    ensure!(
+        source[end..].trim().is_empty(),
+        crate::Error::TrailingInput(source.into())
+    );
+    Ok(expr)
+}
+
+/// A literal token or a formula evaluated once when this word position is reached.
+/// A splice can produce zero, one, or several tokens; it is never reparsed as a word.
 pub enum DeferredToken {
     Literal(Template),
     Func(formulas::Expr),
@@ -142,7 +170,7 @@ pub fn block(s: &str) -> Result<usize> {
     Err(SyntaxError::UnclosedArguments { input: s.into() }.into())
 }
 
-/// Splits `name: expression` pairs while retaining the original formula text.
+/// Parses ordered `name: expression` pairs, including standalone `_` constraints.
 pub fn args(mut s: &str) -> Result<Args> {
     let mut result = Args::new();
     while !s.trim().is_empty() {
@@ -156,13 +184,10 @@ pub fn args(mut s: &str) -> Result<Args> {
             SyntaxError::InvalidArgumentName { name: k.into() }
         );
         let rest = rest.trim_start();
-        let end=  {
-            let (expr, n) = parse_next(rest)
-                .with_context(|| "Error parsing token arguments".into())?;
-            
-            result.insert(k.into(), expr.into());
-            n
-        };
+        // parse_next returns a byte offset, safe for slicing the original UTF-8.
+        let (expr, end) =
+            parse_next(rest).with_context(|| format!("Parsing argument {k}: {rest:?}"))?;
+        result.insert(k.into(), expr.into());
         s = rest[end..].trim_start();
         if !s.is_empty() {
             s = s.strip_prefix(',').ok_or(SyntaxError::ExpectedComma)?
@@ -172,19 +197,16 @@ pub fn args(mut s: &str) -> Result<Args> {
 }
 /// Consumes one symbol and its optional argument block, leaving the suffix.
 pub fn atom(s: &str) -> Result<(DeferredToken, &str)> {
-    if s.trim().starts_with("${") {
-        // spliced formula
-        let (expr, idx) = formulas::parse_next(&s[2..])?;
-        // skip the "${" prefix and the "}" suffix
+    if s.starts_with("${") {
+        let (expr, idx) =
+            formulas::parse_next(&s[2..]).with_context(|| format!("Parsing splice {s:?}"))?;
+        // The expression parser stops before the delimiter; validate it explicitly.
         let end_idx = 2 + idx;
-        let s = s[end_idx..].trim_start();
-        if !s.starts_with('}') {
+        let rest = s[end_idx..].trim_start();
+        if !rest.starts_with('}') {
             return Err(SyntaxError::UnclosedArguments { input: s.into() }.into());
         }
-        return Ok((
-            DeferredToken::Func(expr),
-            &s[1..],
-        ));
+        return Ok((DeferredToken::Func(expr), &rest[1..]));
     }
     let raw = s.graphemes(true).next().ok_or(SyntaxError::MissingSymbol)?;
     // Slice the original input before normalization, which may change byte length.
@@ -198,8 +220,8 @@ pub fn atom(s: &str) -> Result<(DeferredToken, &str)> {
         let end = block(rest)?;
         (
             Template {
-                ch,
-                args: args(&rest[1..end - 1])?,
+                ch: ch.clone(),
+                args: args(&rest[1..end - 1]).with_context(|| format!("symbol {ch}"))?,
             },
             &rest[end..],
         )
@@ -221,7 +243,7 @@ pub fn word(mut s: &str) -> Result<Vec<DeferredToken>> {
         let (t, rest) = atom(s.trim_start())?;
         if let DeferredToken::Literal(lit) = &t {
             ensure!(
-                !META.contains(lit.ch.as_ref()) && !r#"{}:,"'"#.contains(lit.ch.as_ref()),
+                !reserved(&lit.ch),
                 SyntaxError::ReservedSymbol {
                     symbol: lit.ch.clone()
                 }
@@ -253,6 +275,68 @@ mod tests {
     use super::*;
 
     #[test]
+    fn splice_delimiters_and_unicode_argument_boundaries() -> Result<()> {
+        let (token, rest) = atom("${{'symbol':'é', 'args':{'text':'}'}}\u{a0}}B")?;
+        assert!(matches!(token, DeferredToken::Func(_)));
+        assert_eq!(rest, "B");
+        for source in ["${'F'", "${'F'X", "${}"] {
+            assert!(atom(source).is_err(), "{source}");
+        }
+        let values = args("text: 'é👩‍🔬', n: 2, present: _")?;
+        assert_eq!(values.len(), 3);
+        assert_eq!(values["present"], Arg::Joker);
+        assert!(matches!(values["n"], Arg::Expr(_)));
+        Ok(())
+    }
+
+    #[test]
+    fn token_values_share_symbol_validation_and_preserve_arguments() -> Result<()> {
+        for source in ["e\u{301}", "👩‍🔬", "F", "[", "]"] {
+            let literal = Token::try_from(V::String(source.into()))?;
+            let object = V::Object(Arc::new(IndexMap::from([
+                ("symbol".into(), V::String(source.into())),
+                (
+                    "args".into(),
+                    V::Object(Arc::new(IndexMap::from([("x".into(), V::Int(7))]))),
+                ),
+            ])));
+            let token = Token::try_from(object)?;
+            assert_eq!(literal.ch, token.ch);
+            assert_eq!(token.ch.as_ref(), source.nfc().collect::<String>());
+            assert_eq!(token.args["x"], V::Int(7));
+        }
+        for source in ["", "AB", "+", "$", "{", "}", ":", ",", "\"", "'"] {
+            for value in [
+                V::String(source.into()),
+                V::Object(Arc::new(IndexMap::from([(
+                    "symbol".into(),
+                    V::String(source.into()),
+                )]))),
+            ] {
+                assert!(Token::try_from(value).is_err(), "{source:?}");
+            }
+        }
+        assert!(Token::try_from(V::Int(3)).is_err());
+        assert!(Token::try_from(V::Object(Arc::new(IndexMap::new()))).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn complete_fields_allow_whitespace_but_reject_trailing_tokens() -> Result<()> {
+        for source in ["1 ", "true\n", "'é'\u{a0}", "fn x -> x + 1 "] {
+            expression(source)?;
+        }
+        for source in ["1 garbage", "true false", "1, 2"] {
+            let error = expression(source).unwrap_err();
+            assert!(matches!(
+                error.without_context(),
+                crate::Error::TrailingInput(_)
+            ));
+        }
+        Ok(())
+    }
+
+    #[test]
     fn normalization_preserves_source_offsets_and_argument_text() -> Result<()> {
         for (raw, normalized) in [
             ("e\u{301}", "é"),
@@ -266,7 +350,10 @@ mod tests {
                 unreachable!("Expected a literal token");
             };
             assert_eq!(token.ch.as_ref(), normalized);
-            assert_eq!(token.args["text"], formulas::parse_next("'e\u{301}'")?.0.into());
+            assert_eq!(
+                token.args["text"],
+                formulas::parse_next("'e\u{301}'")?.0.into()
+            );
             assert_eq!(rest, "B");
         }
         Ok(())
