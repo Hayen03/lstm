@@ -1,18 +1,16 @@
-//! Loads JSON5 models and coordinates rewriting, formula evaluation, and drawing.
+//! Executes models independently of their source format: rewriting, formulas, and drawing.
 //! Rule matching reads the previous word, but successors are evaluated and drawn
 //! in order so later expressions can observe the turtle's updated position.
 
-use crate::err::{Error, Result, ResultContext, SyntaxError, ensure};
+use crate::err::{Error, Result, ResultContext, ensure};
 use crate::{
-    context::{Pattern, predecessor},
+    context::Pattern,
     dessin::Dessin,
     runtime::{self, Runtime},
     syntax::*,
     trace::Trace,
 };
 use formulas::{Env, EvalValue as V, FormulaEngine, Function};
-use indexmap::IndexMap;
-use serde::Deserialize;
 use serde_json::{Value, json};
 use std::collections::VecDeque;
 use std::{
@@ -20,68 +18,19 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-#[derive(Deserialize, Default)]
-#[serde(default)]
-struct Source {
-    name: String,
-    axiom: String,
-    globals: IndexMap<String, Value>,
-    bg: Option<Value>,
-    width: Option<Value>,
-    height: Option<Value>,
-    seed: Option<Value>,
-    recommended_iterations: Option<i64>,
-    symbols: Vec<String>,
-    drawing: Vec<RuleSource>,
-    rules: Vec<RuleSource>,
-    reclim: Option<Value>,
+pub(crate) struct Symbol {
+    pub(crate) defaults: Args,
 }
-#[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
-struct RuleSource {
-    #[serde(default)]
-    locals: IndexMap<String, Value>,
-    from: String,
-    #[serde(default)]
-    to: String,
-    name: Option<String>,
-    weight: Option<f64>,
-    specificity: Option<i64>,
-    cond: Option<Value>,
-}
-// JSON strings contain formula source; scalar JSON values become literal formulas.
-fn formula(v: Value) -> String {
-    match v {
-        Value::String(s) => s,
-        _ => v.to_string(),
-    }
-}
-fn seed(s: &str) -> u64 {
-    if let Ok(n) = s.parse::<u64>() {
-        return n;
-    }
-    if let Ok(n) = s.parse::<i64>() {
-        return n as u64;
-    }
-    // FNV-1a gives text seeds a repeatable mapping without a randomized Rust hasher.
-    s.bytes().fold(0xcbf29ce484222325, |h, b| {
-        (h ^ b as u64).wrapping_mul(0x100000001b3)
-    })
-}
-
-struct Symbol {
-    defaults: Args,
-}
-struct Rule {
-    locals: Args,
-    core: Template,
-    left: Option<Pattern>,
-    right: Option<Pattern>,
-    cond: Option<formulas::Expr>,
-    out: Vec<DeferredToken>,
-    weight: f64,
-    specificity: i64,
-    name: String,
+pub(crate) struct Rule {
+    pub(crate) locals: Args,
+    pub(crate) core: Template,
+    pub(crate) left: Option<Pattern>,
+    pub(crate) right: Option<Pattern>,
+    pub(crate) cond: Option<formulas::Expr>,
+    pub(crate) out: Vec<DeferredToken>,
+    pub(crate) weight: f64,
+    pub(crate) specificity: i64,
+    pub(crate) name: String,
 }
 /// Parsed model definitions and the formula engine shared by all generations.
 pub struct Model {
@@ -90,103 +39,15 @@ pub struct Model {
     pub bg: u32,
     pub width: u32,
     pub height: u32,
-    axiom: Arc<[DeferredToken]>,
-    symbols: Arc<HashMap<Arc<str>, Symbol>>,
-    rules: Arc<[Rule]>,
-    drawing: Vec<Rule>,
-    engine: FormulaEngine,
-    runtime: Runtime,
+    pub(crate) axiom: Arc<[DeferredToken]>,
+    pub(crate) symbols: Arc<HashMap<Arc<str>, Symbol>>,
+    pub(crate) rules: Arc<[Rule]>,
+    pub(crate) drawing: Vec<Rule>,
+    pub(crate) engine: FormulaEngine,
+    pub(crate) runtime: Runtime,
     pub rec_lim: usize,
 }
 impl Model {
-    /// Parses definitions and applies CLI overrides before evaluating canvas settings.
-    pub fn load(
-        text: &str,
-        override_axiom: Option<&str>,
-        globals: &str,
-        user_seed: Option<&str>,
-        freclim: Option<usize>,
-    ) -> Result<Self> {
-        let s: Source = json5::from_str(text)?;
-        let seed_arg = s.seed.map(formula);
-
-        let runtime = Runtime::default();
-        let mut env = runtime.environment();
-        let mut engine = FormulaEngine::new(user_seed.or(seed_arg.as_deref()).map(seed))
-            .with_globals(env.clone());
-        if let Some(freclim) = freclim {
-            engine = engine.with_max_rec(freclim);
-        }
-
-        let mut defs: Args = IndexMap::new();
-        for (name, value) in s.globals {
-            let expr =
-                expression(&formula(value)).with_context(|| format!("Parsing global {name}"))?;
-            defs.insert(name.into(), expr.into());
-        }
-        let g = globals.trim();
-        defs.extend(
-            args(
-                g.strip_prefix('{')
-                    .and_then(|v| v.strip_suffix('}'))
-                    .unwrap_or(g),
-            )
-            .context("Parsing CLI globals")?,
-        );
-        // Evaluate each definition once, in declaration order. Function bodies
-        // run only when called and resolve globals through the engine normally.
-        for (name, source) in defs {
-            let value = argument_value(&source, &mut engine, &Env::new())
-                .with_context(|| format!("global {name}"))?;
-            env.insert(name, value);
-            engine = engine.with_globals(env.clone());
-        }
-        let mut setting = |field: &'static str, value: Option<Value>, default| -> Result<u32> {
-            let Some(value) = value else {
-                return Ok(default);
-            };
-            let value = engine.evaluate(&formula(value), &Env::new())?.to_i64()?;
-            u32::try_from(value).map_err(|source| Error::InvalidUnsignedSetting {
-                field,
-                value,
-                source,
-            })
-        };
-        let bg = setting("bg", s.bg, 0xffffff)?;
-        let width = setting("width", s.width, 1000)?;
-        let height = setting("height", s.height, 800)?;
-        let rec_lim = setting("reclim", s.reclim, 128)? as usize;
-        let mut symbols = HashMap::new();
-        for declaration in s.symbols {
-            let core = single(&declaration)
-                .with_context(|| format!("Parsing symbol declaration {declaration:?}"))?;
-            ensure!(
-                !DRAW.contains(core.ch.as_ref()) && !"[]".contains(core.ch.as_ref()),
-                SyntaxError::ReservedSymbol { symbol: core.ch }
-            );
-            symbols.insert(
-                core.ch,
-                Symbol {
-                    defaults: core.args,
-                },
-            );
-        }
-        let axiom = word(override_axiom.unwrap_or(&s.axiom)).context("Parsing axiom")?;
-        Ok(Self {
-            name: s.name,
-            iterations: s.recommended_iterations.unwrap_or(5),
-            bg,
-            axiom: axiom.into(),
-            symbols: Arc::new(symbols),
-            rules: parse_rules(s.rules, "growth")?.into(),
-            drawing: parse_rules(s.drawing, "drawing")?,
-            width,
-            height,
-            rec_lim,
-            engine,
-            runtime,
-        })
-    }
     pub fn frame(
         &mut self,
         prev: Arc<[Token]>,
@@ -239,54 +100,6 @@ impl Model {
         let result = std::mem::take(&mut word.lock().unwrap().tokens);
         Ok(result.into())
     }
-}
-
-/// Attach field and rule identities at load time, before any generation runs.
-fn parse_rules(source: Vec<RuleSource>, phase: &str) -> Result<Vec<Rule>> {
-    source
-        .into_iter()
-        .enumerate()
-        .map(|(i, r)| {
-            let name = r.name.unwrap_or_else(|| format!("rule[{i}]"));
-            (|| -> Result<Rule> {
-                let (l, core, h) = predecessor(&r.from).context("field from")?;
-                let left = l.map(Pattern::parse).transpose().context("left context")?;
-                let right = h.map(Pattern::parse).transpose().context("right context")?;
-                let specificity = r.specificity.unwrap_or(
-                    core.args.len() as i64 + left.is_some() as i64 + right.is_some() as i64,
-                );
-                let weight = r.weight.unwrap_or(1.);
-                ensure!(
-                    weight >= 0. && weight.is_finite(),
-                    Error::InvalidRuleWeight { weight }
-                );
-                let mut locals = Args::new();
-                for (key, value) in r.locals {
-                    let expr =
-                        expression(&formula(value)).with_context(|| format!("local {key}"))?;
-                    locals.insert(key.into(), expr.into());
-                }
-                let cond = r
-                    .cond
-                    .map(|value| expression(&formula(value)))
-                    .transpose()
-                    .context("field cond")?;
-                let out = word(&r.to).context("field to")?;
-                Ok(Rule {
-                    locals,
-                    core,
-                    left,
-                    right,
-                    cond,
-                    out,
-                    weight,
-                    specificity,
-                    name: name.clone(),
-                })
-            })()
-            .with_context(|| format!("Parsing {phase} rule {name} (index {i})"))
-        })
-        .collect()
 }
 
 fn trace_queries(runtime: &Runtime, tr: &mut Trace, phase: &str) -> Result<()> {
@@ -390,7 +203,7 @@ fn constraints(
     Ok(true)
 }
 /// A joker is legal only in a pattern, never as an evaluated argument or local.
-fn argument_value(arg: &Arg, engine: &mut FormulaEngine, env: &Env) -> Result<V> {
+pub(crate) fn argument_value(arg: &Arg, engine: &mut FormulaEngine, env: &Env) -> Result<V> {
     match arg {
         Arg::Expr(expr) => engine
             .evalexpr(expr, env)
@@ -923,9 +736,9 @@ fn draw(
                     let element = item.element;
                     let t =
                         finish_spliced_token(item, runtime, symbols, engine, &env, tr, "drawing")?;
-                    draw(runtime, symbols, rules, engine, &t, d, tr, path, rec_lim).map_err(|error| {
-                        drawing_error(error, &rule.name, i, successor, Some(element))
-                    })?;
+                    draw(runtime, symbols, rules, engine, &t, d, tr, path, rec_lim).map_err(
+                        |error| drawing_error(error, &rule.name, i, successor, Some(element)),
+                    )?;
                 }
             }
         }
@@ -956,9 +769,10 @@ fn drawing_error(
 mod tests {
     // Exercise full generation transitions, including each model’s live state.
     use super::*;
+    use crate::{err::SyntaxError, loaders::json5::Json5Loader};
     fn generations(src: &str, n: i64, animate: bool) -> Result<Vec<Arc<[Token]>>> {
         let mut d = Dessin::new(800, 600);
-        let mut m = Model::load(src, None, "", Some("1"), None)?;
+        let mut m = Json5Loader::load(src, None, "", Some("1"), None)?;
         let mut trace = Trace::new(Default::default())?;
         let mut frames = Vec::new();
         let mut seq: Arc<[Token]> = Vec::new().into();
@@ -969,7 +783,7 @@ mod tests {
         Ok(frames)
     }
     fn final_pose(src: &str, n: i64) -> Result<f64> {
-        let mut model = Model::load(src, None, "", Some("fixture"), None)?;
+        let mut model = Json5Loader::load(src, None, "", Some("fixture"), None)?;
         let mut turtle = Dessin::new(800, 600);
         let mut trace = Trace::new(Default::default())?;
         let mut seq = Arc::from([]);
@@ -1034,7 +848,7 @@ mod tests {
             r#"{globals:{bad:"later+1",later:"4"}}"#,
             r#"{globals:{bad:"other",other:"bad"}}"#,
         ] {
-            let error = Model::load(src, None, "", None, None)
+            let error = Json5Loader::load(src, None, "", None, None)
                 .err()
                 .expect("invalid global");
             assert!(format!("{error:#}").contains("global bad"));
@@ -1045,7 +859,7 @@ mod tests {
     #[test]
     fn model_validation_errors_are_typed() {
         let load_error = |src| {
-            Model::load(src, None, "", None, None)
+            Json5Loader::load(src, None, "", None, None)
                 .err()
                 .expect("invalid model")
         };
@@ -1080,7 +894,7 @@ mod tests {
             "{symbols:[{symbol:'A{x:2}',drawing:'F',locals:{step:2}}]}",
         ] {
             assert!(matches!(
-                Model::load(src, None, "", None, None),
+                Json5Loader::load(src, None, "", None, None),
                 Err(Error::Json5(_))
             ));
         }
@@ -1088,7 +902,7 @@ mod tests {
             for field in ["left-ctx", "right-ctx"] {
                 for value in ["'B'", "null"] {
                     let src = format!("{{{family}:[{{from:'A','{field}':{value}}}]}}");
-                    let error = Model::load(&src, None, "", None, None)
+                    let error = Json5Loader::load(&src, None, "", None, None)
                         .err()
                         .expect("invalid rule");
                     assert!(matches!(error, Error::Json5(_)));
@@ -1119,12 +933,12 @@ mod tests {
     #[test]
     fn globals_are_sampled_once_and_models_are_isolated() -> Result<()> {
         let src = r#"{globals:{roll:"random()",twice:"roll+roll"}}"#;
-        let mut model = Model::load(src, None, "", Some("1"), None)?;
+        let mut model = Json5Loader::load(src, None, "", Some("1"), None)?;
         let mut reference = FormulaEngine::new(Some(1));
         let env = Env::new();
         let first = reference.evaluate("random()", &env)?;
         let second = reference.evaluate("random()", &env)?;
-        let _other = Model::load("{globals:{roll:42}}", None, "", None, None)?;
+        let _other = Json5Loader::load("{globals:{roll:42}}", None, "", None, None)?;
         for _ in 0..3 {
             assert_eq!(model.engine.evaluate("roll", &env)?, first);
             assert_eq!(
@@ -1142,12 +956,12 @@ mod tests {
           axiom:"A B{id:id}",
           rules:[{from:"A",to:"A{seen:marked()[0],neighbor:rctx(0)[0].args.id,g:gen()}"}],
           drawing:[{from:"A",locals:{record:"mark(id)"},to:"P{x:id,y:0}H{rot:id}"}]}"#;
-        let mut first = Model::load(src, None, "", Some("1"), None)?;
+        let mut first = Json5Loader::load(src, None, "", Some("1"), None)?;
         let mut d1 = Dessin::new(100, 200);
         let mut tr = Trace::new(Default::default())?;
         let word1 = first.frame(Arc::from([]), 0, &mut d1, &mut tr, true, None)?;
         // Loading another model must start from its own initial runtime state.
-        let mut second = Model::load(src, None, "id:22", Some("1"), None)?;
+        let mut second = Json5Loader::load(src, None, "id:22", Some("1"), None)?;
         assert_eq!(second.engine.evaluate("initial", &Env::new())?, V::Int(0));
         let mut d2 = Dessin::new(300, 400);
         let word2 = second.frame(Arc::from([]), 0, &mut d2, &mut tr, true, None)?;
@@ -1180,7 +994,7 @@ mod tests {
     fn global_overrides_precede_evaluation_and_functions_read_live_state() -> Result<()> {
         let src = r#"{globals:{base:"error('overridden')",derived:"base*2",
                               current:"fn -> gen()+later",later:4}}"#;
-        let mut model = Model::load(src, None, "base:3", None, None)?;
+        let mut model = Json5Loader::load(src, None, "base:3", None, None)?;
         assert_eq!(model.engine.evaluate("derived", &Env::new())?, V::Int(6));
         for n in [0, 7] {
             model.runtime.generation(n, Arc::from([]));
@@ -1303,7 +1117,7 @@ mod tests {
     #[test]
     fn apple_seasons_completes_its_lifecycle() -> Result<()> {
         let src = include_str!("../lstms/apple_seasons.lstm");
-        let iterations = Model::load(src, None, "", Some("1"), None)?.iterations;
+        let iterations = Json5Loader::load(src, None, "", Some("1"), None)?.iterations;
         let frames = generations(src, iterations, true)?;
         // Exercise the falling-fruit rules that only become active after generation 16.
         for stage in ["T", "G", "w"] {

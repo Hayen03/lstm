@@ -4,6 +4,7 @@
 pub mod context;
 pub mod dessin;
 pub mod err;
+pub mod loaders;
 pub mod model;
 pub mod runtime;
 pub mod syntax;
@@ -13,8 +14,8 @@ use crate::err::{Error, Result, ResultContext, ensure};
 use clap::Parser;
 use dessin::Dessin;
 use gif::{Encoder, Frame, Repeat};
+use loaders::json5::Json5Loader;
 use minifb::{Key, Window, WindowOptions};
-use model::Model;
 use std::{
     fs,
     io::Write,
@@ -73,8 +74,14 @@ fn same(a: &Path, b: &Path) -> bool {
 fn run(c: Cli) -> Result<()> {
     let src =
         fs::read_to_string(&c.file).with_context(|| format!("Reading {}", c.file.display()))?;
-    let mut model = Model::load(&src, c.axiom.as_deref(), &c.globals, c.seed.as_deref(), c.freclim)
-        .with_context(|| format!("Loading {}", c.file.display()))?;
+    let mut model = Json5Loader::load(
+        &src,
+        c.axiom.as_deref(),
+        &c.globals,
+        c.seed.as_deref(),
+        c.freclim,
+    )
+    .with_context(|| format!("Loading {}", c.file.display()))?;
 
     let width = c.width.unwrap_or(model.width);
     let height = c.height.unwrap_or(model.height);
