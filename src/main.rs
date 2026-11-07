@@ -53,6 +53,12 @@ struct Cli {
     height: Option<u32>,
     #[command(flatten)]
     trace: trace::Options,
+    /// Recursion limit for drawing.
+    #[arg(short = 'D', long)]
+    dreclim: Option<usize>,
+    /// Recursion limit for functions.
+    #[arg(short = 'F', long)]
+    freclim: Option<usize>,
 }
 fn extension(path: &Path) -> String {
     path.extension()
@@ -67,7 +73,7 @@ fn same(a: &Path, b: &Path) -> bool {
 fn run(c: Cli) -> Result<()> {
     let src =
         fs::read_to_string(&c.file).with_context(|| format!("Reading {}", c.file.display()))?;
-    let mut model = Model::load(&src, c.axiom.as_deref(), &c.globals, c.seed.as_deref())
+    let mut model = Model::load(&src, c.axiom.as_deref(), &c.globals, c.seed.as_deref(), c.freclim)
         .with_context(|| format!("Loading {}", c.file.display()))?;
 
     let width = c.width.unwrap_or(model.width);
@@ -193,7 +199,7 @@ fn run(c: Cli) -> Result<()> {
         // Capture the same pass that evaluates drawing locals and weighted rules.
         d.capture = show;
         seq = model
-            .frame(seq, generation, &mut d, &mut trace, animate)
+            .frame(seq, generation, &mut d, &mut trace, animate, c.dreclim)
             .with_context(|| format!("Generation {generation}"))?;
         if show {
             let raster = d.raster()?;

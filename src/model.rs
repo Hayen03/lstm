@@ -34,6 +34,7 @@ struct Source {
     symbols: Vec<String>,
     drawing: Vec<RuleSource>,
     rules: Vec<RuleSource>,
+    reclim: Option<Value>,
 }
 #[derive(Deserialize)]
 #[serde(deny_unknown_fields)]
@@ -95,6 +96,7 @@ pub struct Model {
     drawing: Vec<Rule>,
     engine: FormulaEngine,
     runtime: Runtime,
+    pub rec_lim: usize,
 }
 impl Model {
     /// Parses definitions and applies CLI overrides before evaluating canvas settings.
@@ -103,6 +105,7 @@ impl Model {
         override_axiom: Option<&str>,
         globals: &str,
         user_seed: Option<&str>,
+        freclim: Option<usize>,
     ) -> Result<Self> {
         let s: Source = json5::from_str(text)?;
         let seed_arg = s.seed.map(formula);
@@ -111,6 +114,9 @@ impl Model {
         let mut env = runtime.environment();
         let mut engine = FormulaEngine::new(user_seed.or(seed_arg.as_deref()).map(seed))
             .with_globals(env.clone());
+        if let Some(freclim) = freclim {
+            engine = engine.with_max_rec(freclim);
+        }
 
         let mut defs: Args = IndexMap::new();
         for (name, value) in s.globals {
@@ -149,6 +155,7 @@ impl Model {
         let bg = setting("bg", s.bg, 0xffffff)?;
         let width = setting("width", s.width, 1000)?;
         let height = setting("height", s.height, 800)?;
+        let rec_lim = setting("reclim", s.reclim, 128)? as usize;
         let mut symbols = HashMap::new();
         for declaration in s.symbols {
             let core = single(&declaration)
@@ -175,6 +182,7 @@ impl Model {
             drawing: parse_rules(s.drawing, "drawing")?,
             width,
             height,
+            rec_lim,
             engine,
             runtime,
         })
@@ -186,6 +194,7 @@ impl Model {
         d: &mut Dessin,
         tr: &mut Trace,
         _animate: bool,
+        rec_lim: Option<usize>,
     ) -> Result<Arc<[Token]>> {
         d.reset();
         self.runtime.sync(d);
@@ -222,6 +231,7 @@ impl Model {
                     d,
                     tr,
                     &mut Vec::new(),
+                    rec_lim.unwrap_or(self.rec_lim),
                 )
             })?;
             at += 1;
@@ -865,6 +875,7 @@ fn draw(
     d: &mut Dessin,
     tr: &mut Trace,
     path: &mut Vec<Arc<str>>,
+    rec_lim: usize,
 ) -> Result<()> {
     let Some(i) = select(runtime, rules, token, engine, tr, "drawing")? else {
         if DRAW.contains(token.ch.as_ref()) || "[]".contains(token.ch.as_ref()) {
@@ -877,9 +888,9 @@ fn draw(
     };
     path.push(token.ch.clone());
     ensure!(
-        path.len() <= 128,
+        path.len() <= rec_lim,
         Error::DrawingRecursion {
-            limit: 128,
+            limit: rec_lim,
             path: path
                 .iter()
                 .map(|s| s.to_string())
@@ -901,7 +912,7 @@ fn draw(
         match child {
             DeferredToken::Literal(template) => {
                 let t = actualize(runtime, symbols, engine, template, &env, tr, "drawing")?;
-                draw(runtime, symbols, rules, engine, &t, d, tr, path)
+                draw(runtime, symbols, rules, engine, &t, d, tr, path, rec_lim)
                     .map_err(|error| drawing_error(error, &rule.name, i, successor, None))?;
             }
             DeferredToken::Func(expr) => {
@@ -911,7 +922,7 @@ fn draw(
                     let element = item.element;
                     let t =
                         finish_spliced_token(item, runtime, symbols, engine, &env, tr, "drawing")?;
-                    draw(runtime, symbols, rules, engine, &t, d, tr, path).map_err(|error| {
+                    draw(runtime, symbols, rules, engine, &t, d, tr, path, rec_lim).map_err(|error| {
                         drawing_error(error, &rule.name, i, successor, Some(element))
                     })?;
                 }
@@ -946,23 +957,23 @@ mod tests {
     use super::*;
     fn generations(src: &str, n: i64, animate: bool) -> Result<Vec<Arc<[Token]>>> {
         let mut d = Dessin::new(800, 600);
-        let mut m = Model::load(src, None, "", Some("1"))?;
+        let mut m = Model::load(src, None, "", Some("1"), None)?;
         let mut trace = Trace::new(Default::default())?;
         let mut frames = Vec::new();
         let mut seq: Arc<[Token]> = Vec::new().into();
         for i in 0..=n {
-            seq = m.frame(seq, i, &mut d, &mut trace, animate)?;
+            seq = m.frame(seq, i, &mut d, &mut trace, animate, None)?;
             frames.push(seq.clone());
         }
         Ok(frames)
     }
     fn final_pose(src: &str, n: i64) -> Result<f64> {
-        let mut model = Model::load(src, None, "", Some("fixture"))?;
+        let mut model = Model::load(src, None, "", Some("fixture"), None)?;
         let mut turtle = Dessin::new(800, 600);
         let mut trace = Trace::new(Default::default())?;
         let mut seq = Arc::from([]);
         for g in 0..=n {
-            seq = model.frame(seq, g, &mut turtle, &mut trace, true)?;
+            seq = model.frame(seq, g, &mut turtle, &mut trace, true, None)?;
         }
         Ok(turtle.pose().p.0)
     }
@@ -1022,7 +1033,7 @@ mod tests {
             r#"{globals:{bad:"later+1",later:"4"}}"#,
             r#"{globals:{bad:"other",other:"bad"}}"#,
         ] {
-            let error = Model::load(src, None, "", None)
+            let error = Model::load(src, None, "", None, None)
                 .err()
                 .expect("invalid global");
             assert!(format!("{error:#}").contains("global bad"));
@@ -1033,7 +1044,7 @@ mod tests {
     #[test]
     fn model_validation_errors_are_typed() {
         let load_error = |src| {
-            Model::load(src, None, "", None)
+            Model::load(src, None, "", None, None)
                 .err()
                 .expect("invalid model")
         };
@@ -1068,7 +1079,7 @@ mod tests {
             "{symbols:[{symbol:'A{x:2}',drawing:'F',locals:{step:2}}]}",
         ] {
             assert!(matches!(
-                Model::load(src, None, "", None),
+                Model::load(src, None, "", None, None),
                 Err(Error::Json5(_))
             ));
         }
@@ -1076,7 +1087,7 @@ mod tests {
             for field in ["left-ctx", "right-ctx"] {
                 for value in ["'B'", "null"] {
                     let src = format!("{{{family}:[{{from:'A','{field}':{value}}}]}}");
-                    let error = Model::load(&src, None, "", None)
+                    let error = Model::load(&src, None, "", None, None)
                         .err()
                         .expect("invalid rule");
                     assert!(matches!(error, Error::Json5(_)));
@@ -1107,12 +1118,12 @@ mod tests {
     #[test]
     fn globals_are_sampled_once_and_models_are_isolated() -> Result<()> {
         let src = r#"{globals:{roll:"random()",twice:"roll+roll"}}"#;
-        let mut model = Model::load(src, None, "", Some("1"))?;
+        let mut model = Model::load(src, None, "", Some("1"), None)?;
         let mut reference = FormulaEngine::new(Some(1));
         let env = Env::new();
         let first = reference.evaluate("random()", &env)?;
         let second = reference.evaluate("random()", &env)?;
-        let _other = Model::load("{globals:{roll:42}}", None, "", None)?;
+        let _other = Model::load("{globals:{roll:42}}", None, "", None, None)?;
         for _ in 0..3 {
             assert_eq!(model.engine.evaluate("roll", &env)?, first);
             assert_eq!(
@@ -1130,15 +1141,15 @@ mod tests {
           axiom:"A B{id:id}",
           rules:[{from:"A",to:"A{seen:marked()[0],neighbor:rctx(0)[0].args.id,g:gen()}"}],
           drawing:[{from:"A",locals:{record:"mark(id)"},to:"P{x:id,y:0}H{rot:id}"}]}"#;
-        let mut first = Model::load(src, None, "", Some("1"))?;
+        let mut first = Model::load(src, None, "", Some("1"), None)?;
         let mut d1 = Dessin::new(100, 200);
         let mut tr = Trace::new(Default::default())?;
-        let word1 = first.frame(Arc::from([]), 0, &mut d1, &mut tr, true)?;
+        let word1 = first.frame(Arc::from([]), 0, &mut d1, &mut tr, true, None)?;
         // Loading another model must start from its own initial runtime state.
-        let mut second = Model::load(src, None, "id:22", Some("1"))?;
+        let mut second = Model::load(src, None, "id:22", Some("1"), None)?;
         assert_eq!(second.engine.evaluate("initial", &Env::new())?, V::Int(0));
         let mut d2 = Dessin::new(300, 400);
-        let word2 = second.frame(Arc::from([]), 0, &mut d2, &mut tr, true)?;
+        let word2 = second.frame(Arc::from([]), 0, &mut d2, &mut tr, true, None)?;
         for (model, position, width) in [(&mut first, 11, 100), (&mut second, 22, 300)] {
             assert_eq!(
                 model.engine.evaluate("position()[0]", &Env::new())?,
@@ -1153,8 +1164,8 @@ mod tests {
                 V::Int(width)
             );
         }
-        let word1 = first.frame(word1, 1, &mut d1, &mut tr, true)?;
-        let word2 = second.frame(word2, 2, &mut d2, &mut tr, true)?;
+        let word1 = first.frame(word1, 1, &mut d1, &mut tr, true, None)?;
+        let word2 = second.frame(word2, 2, &mut d2, &mut tr, true, None)?;
         for (word, id, generation) in [(word1, 11, 1), (word2, 22, 2)] {
             assert_eq!(word[0].args["seen"], V::Int(id));
             assert_eq!(word[0].args["neighbor"], V::Int(id));
@@ -1168,7 +1179,7 @@ mod tests {
     fn global_overrides_precede_evaluation_and_functions_read_live_state() -> Result<()> {
         let src = r#"{globals:{base:"error('overridden')",derived:"base*2",
                               current:"fn -> gen()+later",later:4}}"#;
-        let mut model = Model::load(src, None, "base:3", None)?;
+        let mut model = Model::load(src, None, "base:3", None, None)?;
         assert_eq!(model.engine.evaluate("derived", &Env::new())?, V::Int(6));
         for n in [0, 7] {
             model.runtime.generation(n, Arc::from([]));
@@ -1291,7 +1302,7 @@ mod tests {
     #[test]
     fn apple_seasons_completes_its_lifecycle() -> Result<()> {
         let src = include_str!("../lstms/apple_seasons.lstm");
-        let iterations = Model::load(src, None, "", Some("1"))?.iterations;
+        let iterations = Model::load(src, None, "", Some("1"), None)?.iterations;
         let frames = generations(src, iterations, true)?;
         // Exercise the falling-fruit rules that only become active after generation 16.
         for stage in ["T", "G", "w"] {

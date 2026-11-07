@@ -101,6 +101,7 @@ Le document doit être un objet JSON5, mais utilise généralement l'extension `
   [`width`], [entier ou chaîne de formule], [`1000`], [Largeur du canevas en pixels. La valeur doit être un entier strictement positif.],
   [`height`], [entier ou chaîne de formule], [`800`], [Hauteur du canevas en pixels. La valeur doit être un entier strictement positif.],
   [`seed`], [entier ou chaîne], [absent], [Graine des choix aléatoires. Une chaîne désigne une graine textuelle, sans être évaluée comme une formule.],
+  [`reclim`], [entier ou chaîne de formule], [`128`], [Limite de récursion suggérée pour les règles de dessin.],
 )
 
 Ces champs sont facultatifs ; il est recommandé de

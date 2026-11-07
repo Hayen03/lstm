@@ -99,6 +99,7 @@ The document must be a JSON5 object, but usually uses the `.lstm` extension.
   [`width`], [integer or formula string], [`1000`], [Canvas width in pixels. The value must be a strictly positive integer.],
   [`height`], [integer or formula string], [`800`], [Canvas height in pixels. The value must be a strictly positive integer.],
   [`seed`], [integer or string], [absent], [Seed for random choices. A string denotes a text seed and is not evaluated as a formula.],
+  [`reclim`], [integer or formula string], [`128`], [Suggested recursion limit for drawing rules.],
 )
 
 These fields are optional; writing them explicitly is recommended.

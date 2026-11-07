@@ -26,6 +26,8 @@ By default, the program opens a window displaying the final generation. Close th
 | `-H`, `--height <PIXELS>` | Override canvas height (model value, or 800 by default). |
 | `-h`, `--help` | Show command-line help. |
 | `-V`, `--version` | Show the program version. |
+| `-D`, `--dreclim <LIMIT>` | Set the drawing recursion limit during the drawing step. Must be nonnegative. |
+| `-F`, `--freclim <LIMIT>` | Set the maximum recursion depth for the formula engine. Must be nonnegative. |
 
 Canvas dimensions must each be between 1 and 65,535 pixels, with at most 64,000,000 pixels total. The output directory must already exist.
 
