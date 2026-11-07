@@ -463,6 +463,25 @@ For a finite sequence, the number of rewrites must be a nonnegative integer.
 Generation 0 is the actualized axiom; after N rewrites, generation N is
 reached. Zero rewrites therefore preserve the axiom.
 
+== Spliced Tokens
+
+Spliced tokens are produced by evaluating expressions that may yield multiple tokens at once. When a spliced expression evaluates to an array, each element is converted to a token and added to the frame's buffer. The tokens are then consumed in order, allowing for dynamic expansion of the token stream during growth.
+
+You can splice token evaluation by using the `${...}` syntax within the `to` field of a rule (or the axiom). The expression inside must evaluate to either:
+
+- A `str` (token without arguments)
+- A `dict` of the form `{"symbol": ..., "args": {...}}` where `symbol` is the token's symbol and `args` is a dictionary of its arguments. `symbol` must be a `str` of exactly one grapheme cluster. `args` is optional and defaults to `{}`.
+- An array of the above, producing multiple tokens.
+
+These formulas have the current token's arguments available in their environment.
+
+```json5
+{
+  from: "A{n: _}",
+  to: "${['B' for _ in range(n)]}",
+}
+```
+
 = Drawing expansion and drawing commands
 
 == Applying drawing rules

@@ -343,6 +343,10 @@ impl Parser<'_> {
                             SyntaxError::InvalidContextAtom { symbol: c.into() }
                         );
                         let (t, rest) = atom(self.0)?;
+                        let t = match t {
+                            DeferredToken::Literal(t) => t,
+                            DeferredToken::Func(expr) => return Err(crate::Error::ExprForTok(expr.to_string())),
+                        };
                         self.0 = rest;
                         Pattern::Atom(t)
                     }

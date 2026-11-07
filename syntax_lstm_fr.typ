@@ -455,6 +455,25 @@ Pour une séquence finie, le nombre de réécritures doit être un entier positi
 ou nul. La génération 0 est l’axiome actualisé ; après N réécritures, on atteint
 la génération N. Zéro réécriture conserve donc l’axiome.
 
+== Tokens épissés
+
+Les tokens épissés sont produits en évaluant des expressions qui peuvent générer plusieurs tokens à la fois. Lorsqu’une expression épissée évalue à un tableau, chaque élément est converti en token et ajouté au tampon de l’image. Les tokens sont ensuite consommés dans l’ordre, permettant une expansion dynamique du flux de tokens pendant la croissance.
+
+Vous pouvez épisser l’évaluation des tokens en utilisant la syntaxe `${...}` dans le champ `to` d’une règle (ou l’axiome). L’expression à l’intérieur doit évaluer à l’un des types suivants :
+
+- Une `str` (token sans arguments)
+- Un `dict` de la forme `{"symbol": ..., "args": {...}}` où `symbol` est le symbole du token et `args` est un dictionnaire de ses arguments. `symbol` doit être une `str` d’un seul grapheme. `args` est optionnel et vaut `{}` par défaut.
+- Une `list` des éléments ci-dessus, produisant plusieurs tokens.
+
+Ces formules ont les arguments du token courant disponibles dans leur environnement.
+
+```json5
+{
+  from: "A{n: _}",
+  to: "${['B' for _ in range(n)]}",
+}
+```
+
 = Expansion graphique et commandes de dessin
 
 == Application des règles de dessin

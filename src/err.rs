@@ -150,6 +150,11 @@ pub enum Error {
         expected: String,
         got: EvalValue,
     },
+    InvalidToken(String),
+    ExprForTok(String),
+    InvalidTokenExpression(String),
+    InvalidJoker,
+    TrailingInput(String),
     Context {
         message: String,
         source: Box<Error>,
@@ -234,6 +239,11 @@ impl fmt::Display for Error {
                 f,
                 "Expected N or START:END with 0 <= START <= END, got {input}"
             )?,
+            Self::InvalidToken(msg) => write!(f, "Invalid token: {msg}")?,
+            Self::ExprForTok(expr) => write!(f, "Expected a token, got an expression: {expr}")?,
+            Self::InvalidTokenExpression(expr) => write!(f, "Invalid token expression: {expr}")?,
+            Self::InvalidJoker => write!(f, "Invalid joker")?,
+            Self::TrailingInput(expr) => write!(f, "Trailing input after expression: {expr}")?,
             Self::Context { message, .. } => f.write_str(message)?,
         }
         if f.alternate() {

@@ -2,16 +2,30 @@
 //! Formula parsing owns expression boundaries, so nested commas and braces can
 //! appear inside an argument without splitting the surrounding symbol.
 
-use crate::err::{Result, SyntaxError, ensure};
-use formulas::{EvalValue as V, parse_next};
+use crate::err::{Result, ResultContext, SyntaxError, ensure};
+use formulas::{EvalValue as V, Expr, parse_next};
 use indexmap::IndexMap;
 use std::sync::Arc;
 use unicode_normalization::UnicodeNormalization;
 use unicode_segmentation::UnicodeSegmentation;
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum Arg {
+    Joker,
+    Expr(Expr),
+}
+impl From<formulas::Expr> for Arg {
+    fn from(expr: formulas::Expr) -> Self {
+        if expr == Expr::Joker {
+            return Arg::Joker;
+        }
+        Arg::Expr(expr)
+    }
+}
+
 // Preserve declaration order: evaluating arguments may consume randomness or marks.
 pub type Values = IndexMap<Arc<str>, V>;
-pub type Args = IndexMap<Arc<str>, String>;
+pub type Args = IndexMap<Arc<str>, Arg>;
 pub const DRAW: &str = "FRL()MCWPDH";
 pub const META: &str = "+.-*^$|?><";
 #[derive(Clone, Debug)]
@@ -20,6 +34,7 @@ pub struct Template {
     pub ch: Arc<str>,
     pub args: Args,
 }
+
 #[derive(Clone, Debug)]
 /// A symbol in a generation, with its arguments already resolved to values.
 pub struct Token {
@@ -35,6 +50,64 @@ impl Token {
         ])))
     }
 }
+impl TryFrom<V> for Token {
+    type Error = crate::Error;
+    fn try_from(value: V) -> std::result::Result<Self, Self::Error> {
+        match value {
+            V::String(s) => {
+                let raw = s.graphemes(true).next().ok_or_else(|| crate::Error::InvalidToken(s.to_string()))?;
+                let rest = &s[raw.len()..];
+                if !rest.is_empty() {
+                    return Err(crate::Error::InvalidToken(s.to_string()));
+                }
+                let ch: Arc<str> = if raw.is_ascii() {
+                    Arc::from(raw)
+                } else {
+                    raw.nfc().collect::<String>().into()
+                };
+                if META.contains(&*ch) || r#"{}:,"'"#.contains(ch.as_ref()) {
+                    return Err(crate::Error::InvalidToken(s.to_string()));
+                }
+                Ok(Token { ch, args: IndexMap::new() })
+            },
+            V::Object(data) => {
+                let ch = match data.get("symbol") {
+                    Some(V::String(s)) => {
+                        let raw = s.graphemes(true).next().ok_or_else(|| crate::Error::InvalidToken(s.to_string()))?;
+                        let rest = &s[raw.len()..];
+                        if !rest.is_empty() {
+                            return Err(crate::Error::InvalidToken(s.to_string()));
+                        }
+                        let ch: Arc<str> = if raw.is_ascii() {
+                            Arc::from(raw)
+                        } else {
+                            raw.nfc().collect::<String>().into()
+                        };
+                        if META.contains(&*ch) || r#"{}:,"'"#.contains(ch.as_ref()) {
+                            return Err(crate::Error::InvalidToken(s.to_string()));
+                        }
+                        ch
+                    },
+                    Some(other) => return Err(crate::Error::InvalidToken(format!("Expected a string for 'symbol', got {}", other.repr()))),
+                    None => return Err(crate::Error::InvalidToken("Missing 'symbol' field".into())),
+                };
+                let args = match data.get("args") {
+                    Some(V::Object(map)) => map.as_ref().clone(),
+                    Some(other) => return Err(crate::Error::InvalidToken(format!("Expected an object for 'args', got {}", other.repr()))),
+                    None => IndexMap::new(),
+                };
+                Ok(Token { ch, args })
+            },
+            other => Err(crate::Error::InvalidToken(format!("Expected a string or object, got {}", other.repr()))),
+        }
+    }
+}
+
+pub enum DeferredToken {
+    Literal(Template),
+    Func(formulas::Expr),
+}
+
 /// Returns the UTF-8 byte length of a block starting with `{`, including `}`.
 /// Quoted braces and escaped quotes do not change the nesting depth.
 pub fn block(s: &str) -> Result<usize> {
@@ -68,6 +141,7 @@ pub fn block(s: &str) -> Result<usize> {
     }
     Err(SyntaxError::UnclosedArguments { input: s.into() }.into())
 }
+
 /// Splits `name: expression` pairs while retaining the original formula text.
 pub fn args(mut s: &str) -> Result<Args> {
     let mut result = Args::new();
@@ -82,11 +156,13 @@ pub fn args(mut s: &str) -> Result<Args> {
             SyntaxError::InvalidArgumentName { name: k.into() }
         );
         let rest = rest.trim_start();
-        let (_, n) = parse_next(rest)?;
-        // The formula parser counts characters; Rust string slices require bytes.
-        let end = rest.char_indices().nth(n).map_or(rest.len(), |(i, _)| i);
-        ensure!(end > 0, SyntaxError::EmptyFormula { name: k.into() });
-        result.insert(k.into(), rest[..end].to_owned());
+        let end=  {
+            let (expr, n) = parse_next(rest)
+                .with_context(|| "Error parsing token arguments".into())?;
+            
+            result.insert(k.into(), expr.into());
+            n
+        };
         s = rest[end..].trim_start();
         if !s.is_empty() {
             s = s.strip_prefix(',').ok_or(SyntaxError::ExpectedComma)?
@@ -95,7 +171,21 @@ pub fn args(mut s: &str) -> Result<Args> {
     Ok(result)
 }
 /// Consumes one symbol and its optional argument block, leaving the suffix.
-pub fn atom(s: &str) -> Result<(Template, &str)> {
+pub fn atom(s: &str) -> Result<(DeferredToken, &str)> {
+    if s.trim().starts_with("${") {
+        // spliced formula
+        let (expr, idx) = formulas::parse_next(&s[2..])?;
+        // skip the "${" prefix and the "}" suffix
+        let end_idx = 2 + idx;
+        let s = s[end_idx..].trim_start();
+        if !s.starts_with('}') {
+            return Err(SyntaxError::UnclosedArguments { input: s.into() }.into());
+        }
+        return Ok((
+            DeferredToken::Func(expr),
+            &s[1..],
+        ));
+    }
     let raw = s.graphemes(true).next().ok_or(SyntaxError::MissingSymbol)?;
     // Slice the original input before normalization, which may change byte length.
     let rest = &s[raw.len()..];
@@ -104,48 +194,58 @@ pub fn atom(s: &str) -> Result<(Template, &str)> {
     } else {
         raw.nfc().collect::<String>().into()
     };
-    if rest.starts_with('{') {
+    let tmplt = if rest.starts_with('{') {
         let end = block(rest)?;
-        Ok((
+        (
             Template {
                 ch,
                 args: args(&rest[1..end - 1])?,
             },
             &rest[end..],
-        ))
+        )
     } else {
-        Ok((
+        (
             Template {
                 ch,
                 args: Args::new(),
             },
             rest,
-        ))
-    }
+        )
+    };
+    Ok((DeferredToken::Literal(tmplt.0), tmplt.1))
 }
 /// Parses a whole axiom, successor, or drawing word; whitespace separates symbols.
-pub fn word(mut s: &str) -> Result<Vec<Template>> {
+pub fn word(mut s: &str) -> Result<Vec<DeferredToken>> {
     let mut out = Vec::new();
     while !s.trim_start().is_empty() {
         let (t, rest) = atom(s.trim_start())?;
-        ensure!(
-            !META.contains(t.ch.as_ref()) && !r#"{}:,"'"#.contains(t.ch.as_ref()),
-            SyntaxError::ReservedSymbol {
-                symbol: t.ch.clone()
-            }
-        );
+        if let DeferredToken::Literal(lit) = &t {
+            ensure!(
+                !META.contains(lit.ch.as_ref()) && !r#"{}:,"'"#.contains(lit.ch.as_ref()),
+                SyntaxError::ReservedSymbol {
+                    symbol: lit.ch.clone()
+                }
+            );
+        }
         out.push(t);
         s = rest;
     }
     Ok(out)
 }
+
+/// ensure the input contains exactly one symbol and return it as a Template
+/// Does not accept spliced expressions like `${...}`
 pub fn single(s: &str) -> Result<Template> {
     let mut w = word(s)?;
     ensure!(
         w.len() == 1,
         SyntaxError::ExpectedSingleSymbol { input: s.into() }
     );
-    Ok(w.remove(0))
+    let tok = w.remove(0);
+    match tok {
+        DeferredToken::Literal(lit) => Ok(lit),
+        DeferredToken::Func(expr) => Err(crate::Error::ExprForTok(expr.to_string())),
+    }
 }
 
 #[cfg(test)]
@@ -162,8 +262,11 @@ mod tests {
         ] {
             let source = format!("{raw}{{text: 'e\u{301}'}}B");
             let (token, rest) = atom(&source)?;
+            let DeferredToken::Literal(token) = token else {
+                unreachable!("Expected a literal token");
+            };
             assert_eq!(token.ch.as_ref(), normalized);
-            assert_eq!(token.args["text"], "'e\u{301}'");
+            assert_eq!(token.args["text"], formulas::parse_next("'e\u{301}'")?.0.into());
             assert_eq!(rest, "B");
         }
         Ok(())

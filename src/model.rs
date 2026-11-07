@@ -14,6 +14,7 @@ use formulas::{Env, EvalValue as V, FormulaEngine, Function};
 use indexmap::IndexMap;
 use serde::Deserialize;
 use serde_json::{Value, json};
+use std::collections::VecDeque;
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -66,6 +67,7 @@ fn seed(s: &str) -> u64 {
         (h ^ b as u64).wrapping_mul(0x100000001b3)
     })
 }
+
 struct Symbol {
     defaults: Args,
 }
@@ -74,8 +76,8 @@ struct Rule {
     core: Template,
     left: Option<Pattern>,
     right: Option<Pattern>,
-    cond: Option<String>,
-    out: Vec<Template>,
+    cond: Option<formulas::Expr>,
+    out: Vec<DeferredToken>,
     weight: f64,
     specificity: i64,
     name: String,
@@ -87,7 +89,7 @@ pub struct Model {
     pub bg: u32,
     pub width: u32,
     pub height: u32,
-    axiom: Arc<[Template]>,
+    axiom: Arc<[DeferredToken]>,
     symbols: Arc<HashMap<Arc<str>, Symbol>>,
     rules: Arc<[Rule]>,
     drawing: Vec<Rule>,
@@ -105,26 +107,41 @@ impl Model {
         let s: Source = json5::from_str(text)?;
         let seed_arg = s.seed.map(formula);
 
-        let mut defs: Args = s
-            .globals
+        let runtime = Runtime::default();
+        let mut env = runtime.environment();
+        let mut engine = FormulaEngine::new(user_seed.or(seed_arg.as_deref()).map(seed))
+            .with_globals(env.clone());
+
+        let mut defs: Args = IndexMap::new();
+        for (k, v) in s.globals
             .into_iter()
-            .map(|(k, v)| (k.into(), formula(v)))
-            .collect();
+            .map(|(k, v)| (k.into(), {
+                let form = formula(v);
+                formulas::parse_next(&form).map(|(expr, idx)| {
+                    if form[idx..].trim_start().is_empty() {
+                        Ok(expr)
+                    } else {
+                        Err(crate::Error::TrailingInput(form))
+                    }
+                })
+            })) {
+            let value = v??;
+            defs.insert(k, value.into());
+        }
         let g = globals.trim();
         defs.extend(args(
             g.strip_prefix('{')
                 .and_then(|v| v.strip_suffix('}'))
                 .unwrap_or(g),
         )?);
-        let runtime = Runtime::default();
-        let mut env = runtime.environment();
-        let mut engine = FormulaEngine::new(user_seed.or(seed_arg.as_deref()).map(seed))
-            .with_globals(env.clone());
         // Evaluate each definition once, in declaration order. Function bodies
         // run only when called and resolve globals through the engine normally.
         for (name, source) in defs {
+            let Arg::Expr(source) = source else {
+                return Err(Error::InvalidJoker);
+            };
             let value = engine
-                .evaluate(&source, &Env::new())
+                .evalexpr(&source, &Env::new())
                 .with_context(|| format!("global {name}"))?;
             env.insert(name, value);
             engine = engine.with_globals(env.clone());
@@ -157,11 +174,12 @@ impl Model {
                 },
             );
         }
+        let axiom = word(override_axiom.unwrap_or(&s.axiom))?;
         Ok(Self {
             name: s.name,
             iterations: s.recommended_iterations.unwrap_or(5),
             bg,
-            axiom: word(override_axiom.unwrap_or(&s.axiom))?.into(),
+            axiom: axiom.into(),
             symbols: Arc::new(symbols),
             rules: parse_rules(s.rules)?.into(),
             drawing: parse_rules(s.drawing)?,
@@ -194,6 +212,7 @@ impl Model {
             index: 0,
             pending: None,
             tokens: Vec::new(),
+            buffer: VecDeque::new(),
         }));
         let mut at = 0;
         loop {
@@ -236,18 +255,42 @@ fn parse_rules(source: Vec<RuleSource>) -> Result<Vec<Rule>> {
             weight >= 0. && weight.is_finite(),
             Error::InvalidRuleWeight { weight }
         );
+        let mut locals: Args = IndexMap::new();
+        for (k, v) in r.locals
+            .into_iter()
+            .map(|(k, v)| (k.into(), {
+                let form = formula(v);
+                formulas::parse_next(&form).map(|(expr, idx)| {
+                    if !form[idx..].trim().is_empty() {
+                        Err(crate::Error::TrailingInput(form.clone()))
+                    } else {
+                        Ok(expr)
+                    }
+                })
+            })) {
+            let v = v??;
+            locals.insert(k, v.into());
+        }
         rules.push(Rule {
-            locals: r
-                .locals
-                .into_iter()
-                .map(|(k, v)| (k.into(), formula(v)))
-                .collect(),
+            locals,
             core,
             left,
             right,
             weight,
             specificity,
-            cond: r.cond.map(formula),
+            cond: r.cond
+                .map(|c| {
+                    let form = formula(c);
+                    formulas::parse_next(&form).map(|(expr, idx)| {
+                        if !form[idx..].trim().is_empty() {
+                            Err(crate::Error::TrailingInput(form.clone()))
+                        } else {
+                            Ok(expr)
+                        }
+                    })
+                })
+                .transpose()?
+                .transpose()?,
             name: r.name.unwrap_or_else(|| format!("rule[{i}]")),
             out: word(&r.to)?,
         })
@@ -280,7 +323,7 @@ fn display(v: &V) -> Value {
                 .map(|(k, v)| (k.to_string(), display(v)))
                 .collect(),
         ),
-        V::Func(_) => json!("<function>"),
+        V::Func(f) => json!(f.to_string()),
     }
 }
 fn boolean(v: V) -> Result<bool> {
@@ -312,15 +355,15 @@ fn constraints(
             )?;
             return Ok(false);
         };
-        if expr.trim() == "_" {
+        let Arg::Expr(expr) = expr else {
             continue;
-        }
-        let expected = engine.evaluate(expr, &env)?;
+        };
+        let expected = engine.evalexpr(expr, &env)?;
         trace_queries(runtime, tr, phase)?;
         tr.event(
             phase,
             "constraint_evaluated",
-            || json!({"argument":k.as_ref(),"formula":expr,"value":display(&expected)}),
+            || json!({"argument":k.as_ref(),"formula":expr.to_string(),"value":display(&expected)}),
         )?;
         if let V::Func(f) = &expected {
             if let Function::User(c) = f.as_ref() {
@@ -337,7 +380,7 @@ fn constraints(
             tr.event(
                 phase,
                 "predicate_evaluated",
-                || json!({"argument":k.as_ref(),"formula":expr,"value":matched}),
+                || json!({"argument":k.as_ref(),"formula":expr.to_string(),"value":matched}),
             )?;
             if !matched {
                 return Ok(false);
@@ -377,11 +420,14 @@ fn actualize(
             .get(k)
             .or_else(|| defaults.and_then(|d| d.get(k)))
             .unwrap();
+        let Arg::Expr(expr) = expr else {
+            return Err(Error::InvalidJoker);
+        };
         let v = engine
-            .evaluate(expr, env)
+            .evalexpr(expr, env)
             .with_context(|| format!("argument {}.{k}, generation {}", t.ch, tr.generation))?;
         trace_queries(runtime, tr, phase)?;
-        tr.event(phase,"argument_evaluated",||json!({"argument":k.as_ref(),"formula":expr,"value":display(&v),"target_symbol":t.ch}))?;
+        tr.event(phase,"argument_evaluated",||json!({"argument":k.as_ref(),"formula":expr.to_string(),"value":display(&v),"target_symbol":t.ch}))?;
         values.insert(k.clone(), v);
     }
     Ok(Token {
@@ -425,12 +471,12 @@ fn select(
                 }
             }
             if let Some(cond) = &rule.cond {
-                let ok = boolean(engine.evaluate(cond, &env)?)?;
+                let ok = boolean(engine.evalexpr(cond, &env)?)?;
                 trace_queries(runtime, tr, phase)?;
                 tr.event(
                     phase,
                     "condition_evaluated",
-                    || json!({"formula":cond,"value":ok}),
+                    || json!({"formula":cond.to_string(),"value":ok}),
                 )?;
                 return Ok(ok);
             }
@@ -493,14 +539,17 @@ fn bindings(
 ) -> Result<Env<'static>> {
     let mut env = Env::from_index_map(&token.args);
     for (name, expr) in &rule.locals {
+        let Arg::Expr(expr) = expr else {
+            return Err(Error::InvalidJoker);
+        };
         let value = engine
-            .evaluate(expr, &env)
+            .evalexpr(expr, &env)
             .with_context(|| format!("{phase} rule {} local {name}", rule.name))?;
         trace_queries(runtime, tr, phase)?;
         tr.event(
             phase,
             "local_evaluated",
-            || json!({"local":name.as_ref(),"formula":expr,"value":display(&value)}),
+            || json!({"local":name.as_ref(),"formula":expr.to_string(),"value":display(&value)}),
         )?;
         env.insert(name.clone(), value);
     }
@@ -516,13 +565,14 @@ struct Pending {
 struct FrameWord {
     runtime: Runtime,
     prev: Arc<[Token]>,
-    axiom: Option<Arc<[Template]>>,
+    axiom: Option<Arc<[DeferredToken]>>,
     symbols: Arc<HashMap<Arc<str>, Symbol>>,
     rules: Arc<[Rule]>,
     trace: Trace,
     index: usize,
     pending: Option<Pending>,
     tokens: Vec<Token>,
+    buffer: VecDeque<Token>,
 }
 impl FrameWord {
     fn get(&mut self, at: usize, engine: &mut FormulaEngine) -> Result<Option<Token>> {
@@ -536,43 +586,88 @@ impl FrameWord {
     }
 
     fn produce(&mut self, engine: &mut FormulaEngine) -> Result<Option<Token>> {
+        let empty_env = Env::new();
+        if !self.buffer.is_empty() {
+            let mut tok = self.buffer.pop_front().unwrap();
+            actualize_spliced_token(&mut tok, &self.symbols, engine, &self.pending.as_ref().map(|p| &p.env).unwrap_or(&empty_env))?;
+            return Ok(Some(tok));
+        }
         if let Some(axiom) = &self.axiom {
-            let Some(t) = axiom.get(self.index) else {
-                return Ok(None);
-            };
-            self.trace.index = self.index;
-            self.trace.symbol = t.ch.clone();
-            self.index += 1;
-            return actualize(
-                &self.runtime,
-                &self.symbols,
-                engine,
-                t,
-                &Env::new(),
-                &mut self.trace,
-                "axiom",
-            )
-            .map(Some);
+            loop {
+                let Some(t) = axiom.get(self.index) else {
+                    return Ok(None);
+                };
+                match t {
+                    DeferredToken::Literal(t) => {
+                        self.trace.index = self.index;
+                        self.trace.symbol = t.ch.clone();
+                        self.index += 1;
+                        return actualize(
+                            &self.runtime,
+                            &self.symbols,
+                            engine,
+                            t,
+                            &Env::new(),
+                            &mut self.trace,
+                            "axiom",
+                        )
+                        .map(Some);
+                    },
+                    DeferredToken::Func(expr) => {
+                        let mut tok = eval_spliced_expr(
+                            &mut self.index, 
+                            &mut self.buffer, 
+                            engine, 
+                            expr,
+                            &Env::new(),
+                        )?;
+                        if let Some(tok) = &mut tok {
+                            actualize_spliced_token(tok, &self.symbols, engine, &self.pending.as_ref().map(|p| &p.env).unwrap_or(&empty_env))?;
+                        }
+                        if let Some(tok) = tok {
+                            return Ok(Some(tok));
+                        }
+                    },
+                }
+            }
         }
         loop {
             if let Some(p) = &mut self.pending {
                 if let Some(template) = self.rules[p.rule].out.get(p.next) {
-                    p.next += 1;
-                    let t = actualize(
-                        &self.runtime,
-                        &self.symbols,
-                        engine,
-                        template,
-                        &p.env,
-                        &mut self.trace,
-                        "growth",
-                    )?;
-                    self.trace.event(
-                        "growth",
-                        "token_emitted",
-                        || json!({"output":display(&t.value())}),
-                    )?;
-                    return Ok(Some(t));
+                    match template {
+                        DeferredToken::Literal(template) => {
+                            p.next += 1;
+                            let t = actualize(
+                                &self.runtime,
+                                &self.symbols,
+                                engine,
+                                template,
+                                &p.env,
+                                &mut self.trace,
+                                "growth",
+                            )?;
+                            self.trace.event(
+                                "growth",
+                                "token_emitted",
+                                || json!({"output":display(&t.value())}),
+                            )?;
+                            return Ok(Some(t));
+                        },
+                        DeferredToken::Func(expr) => {
+                            let tok = eval_spliced_expr(
+                                &mut p.next, 
+                                &mut self.buffer, 
+                                engine, 
+                                expr,
+                                &p.env,
+                            )?;
+                            if let Some(mut tok) = tok {
+                                actualize_spliced_token(&mut tok, &self.symbols, engine, &p.env)?;
+                                return Ok(Some(tok));
+                            }
+                            continue;
+                        },
+                    }
                 }
                 self.pending = None;
             }
@@ -616,6 +711,22 @@ impl FrameWord {
                 return Ok(Some(token.clone()));
             }
         }
+    }
+}
+
+fn eval_spliced_expr(frame_index: &mut usize, frame_buffer: &mut VecDeque<Token>, engine: &mut FormulaEngine, expr: &formulas::Expr, env: &Env) -> Result<Option<Token>> {
+    *frame_index += 1;
+    let value = engine.evalexpr(expr, env)?;
+    match value {
+        V::Array(arr) => {
+            let res = arr.into_iter().cloned().map(Token::try_from).collect::<Result<Vec<_>>>()?;
+            *frame_buffer = VecDeque::from(res);
+            return Ok(frame_buffer.pop_front());
+        },
+        other => {
+            let tok = Token::try_from(other)?;
+            return Ok(Some(tok));
+        },
     }
 }
 
@@ -693,11 +804,53 @@ fn draw(
         || json!({"drawing_path":path.iter().map(|s| s.to_string()).collect::<Vec<_>>()}),
     )?;
     for child in &rule.out {
-        tr.rule = Some((i, rule.name.clone()));
-        let t = actualize(runtime, symbols, engine, child, &env, tr, "drawing")?;
-        draw(runtime, symbols, rules, engine, &t, d, tr, path)?;
+        let subs = match child {
+            DeferredToken::Literal(template) => {
+                tr.rule = Some((i, rule.name.clone()));
+                let t = actualize(runtime, symbols, engine, template, &env, tr, "drawing")?;
+                vec![t]
+            },
+            DeferredToken::Func(expr) => actualize_spliced_tokens(expr, engine, &env)?,
+        };
+        
+        for mut t in subs {
+            actualize_spliced_token(&mut t, symbols, engine, &env)?;
+            draw(runtime, symbols, rules, engine, &t, d, tr, path)?;
+        }
     }
     path.pop();
+    Ok(())
+}
+
+fn actualize_spliced_tokens(expr: &formulas::Expr, engine: &mut FormulaEngine, env: &Env) -> Result<Vec<Token>> {
+    let value = engine.evalexpr(expr, &env)?;
+    let tokens = match value {
+        V::Array(arr) => {
+            arr.into_iter().cloned().map(Token::try_from).collect::<Result<Vec<_>>>()?
+        },
+        other => {
+            let tok = Token::try_from(other)?;
+            vec![tok]
+        },
+    };
+
+    // TODO add trace
+
+    Ok(tokens)
+}
+
+fn actualize_spliced_token(tok: &mut Token, symbols: &HashMap<Arc<str>, Symbol>, engine: &mut FormulaEngine, env: &Env) -> Result<()> {
+    if let Some(defaults) = symbols.get(&tok.ch).map(|s| &s.defaults) {
+        for (k, v) in defaults {
+            let Arg::Expr(def_expr) = v else {
+                return Err(Error::InvalidJoker);
+            };
+            if !tok.args.contains_key(k) {
+                let def_val = engine.evalexpr(def_expr, env)?;
+                tok.args.insert(k.clone(), def_val);
+            }
+        }
+    }
     Ok(())
 }
 
