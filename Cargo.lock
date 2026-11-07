@@ -288,7 +288,7 @@ checksum = "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
 [[package]]
 name = "formulas"
 version = "1.0.0"
-source = "git+https://github.com/Hayen03/formulas.git#a32933000c0753e4dfa4a827adf516f7cf1c0a81"
+source = "git+https://github.com/Hayen03/formulas.git#7c8b3650f41f719abe43257ad8c3751b83085186"
 dependencies = [
  "indexmap",
  "rand",

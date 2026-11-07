@@ -315,6 +315,7 @@ fn display(v: &V) -> Value {
                 .collect(),
         ),
         V::Func(f) => json!(f.to_string()),
+        V::Type(t) => json!(t.to_string()),
     }
 }
 fn boolean(v: V) -> Result<bool> {
