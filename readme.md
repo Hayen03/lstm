@@ -60,6 +60,6 @@ Trace filters and `--trace-draw` also enable tracing. For example:
 ./target/release/lstm lstms/lindenmayer_algae.lstm -n 3 -o algae.png --trace-output trace.jsonl --trace-format jsonl --trace-generations 0:3
 ```
 
-Both file formats are described in [English](syntax_lstm_en.pdf) and [French](syntax_lstm_fr.pdf). Native blocks use braces `{...}`; square brackets are reserved for words, context patterns, and formula constructs.
+Both file formats are described in [English](syntax_lstm_en.pdf) and [French](syntax_lstm_fr.pdf).
 
 [This program is dependant on my `formulas` crate available here](https://github.com/Hayen03/formulas).
