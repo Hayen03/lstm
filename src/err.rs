@@ -95,6 +95,11 @@ impl StdError for SyntaxError {
 #[derive(Debug)]
 pub enum Error {
     Syntax(SyntaxError),
+    NativeSyntax {
+        line: usize,
+        column: usize,
+        message: String,
+    },
     Formula(Box<formulas::Error>),
     Json5(Box<json5::Error>),
     Io(std::io::Error),
@@ -192,6 +197,11 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Syntax(_) => f.write_str("Invalid L-system syntax")?,
+            Self::NativeSyntax {
+                line,
+                column,
+                message,
+            } => write!(f, "Native syntax at {line}:{column}: {message}")?,
             Self::Formula(_) => f.write_str("Formula evaluation failed")?,
             Self::Json5(_) => f.write_str("Invalid JSON5 model")?,
             Self::Io(_) => f.write_str("I/O operation failed")?,
@@ -231,9 +241,16 @@ impl fmt::Display for Error {
             Self::UnboundedIteration => {
                 f.write_str("Unbounded iteration requires live animation")?
             }
-            Self::InvalidArgument { field, expected, got } => {
-                write!(f, "Invalid argument for {field}: expected {expected}, got {} (type {})", got.repr(), got.type_name())?
-            }
+            Self::InvalidArgument {
+                field,
+                expected,
+                got,
+            } => write!(
+                f,
+                "Invalid argument for {field}: expected {expected}, got {} (type {})",
+                got.repr(),
+                got.type_name()
+            )?,
             Self::GenerationOverflow => f.write_str("Generation overflow")?,
             Self::InvalidTraceRange { input, .. } => write!(
                 f,
@@ -367,7 +384,10 @@ mod tests {
 
     #[test]
     fn syntax_diagnostics_do_not_repeat_the_cause() {
-        let error = Error::from(SyntaxError::ReservedSymbol { symbol: Arc::from("+") }).context("axiom");
+        let error = Error::from(SyntaxError::ReservedSymbol {
+            symbol: Arc::from("+"),
+        })
+        .context("axiom");
         assert!(match error.without_context() {
             Error::Syntax(SyntaxError::ReservedSymbol { symbol: s }) if s.as_ref() == "+" => true,
             _ => false,

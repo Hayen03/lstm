@@ -14,7 +14,6 @@ use crate::err::{Error, Result, ResultContext, ensure};
 use clap::Parser;
 use dessin::Dessin;
 use gif::{Encoder, Frame, Repeat};
-use loaders::json5::Json5Loader;
 use minifb::{Key, Window, WindowOptions};
 use std::{
     fs,
@@ -28,7 +27,7 @@ use tempfile::NamedTempFile;
 #[derive(Parser)]
 #[command(
     version,
-    about = "Render a JSON5 L-system, interactively or to a PNG or GIF."
+    about = "Render a native or JSON5 L-system, interactively or to a PNG or GIF."
 )]
 struct Cli {
     file: PathBuf,
@@ -74,7 +73,7 @@ fn same(a: &Path, b: &Path) -> bool {
 fn run(c: Cli) -> Result<()> {
     let src =
         fs::read_to_string(&c.file).with_context(|| format!("Reading {}", c.file.display()))?;
-    let mut model = Json5Loader::load(
+    let mut model = loaders::load(
         &src,
         c.axiom.as_deref(),
         &c.globals,

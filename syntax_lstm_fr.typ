@@ -23,7 +23,7 @@
   #text(17pt)[Structure des fichiers lstm et utilisation des formules]
   #v(9mm)
   #v(7mm)
-  État de référence : 6 novembre 2026
+  État de référence : 7 novembre 2026
 ]
 #v(16mm)
 Ce document définit la structure des modèles LSTM, la syntaxe des mots et
@@ -46,7 +46,7 @@ Le mot *recommandé* exprime une convention de rédaction.
 
 Un modèle met en œuvre trois niveaux syntaxiques distincts.
 
-+ Le *document JSON5* contient les métadonnées, l’axiome, les définitions de
++ Le *document LSTM natif ou JSON5* contient les métadonnées, l’axiome, les définitions de
   symboles et les règles de croissance et de dessin.
 + Un *mot* du système de Lindenmayer est une chaîne contenant une suite ordonnée
   de tokens. Un token associe un symbole à des arguments nommés.
@@ -81,16 +81,166 @@ Les signatures de fonctions utilisent une autre convention : dans
 effective, les crochets délimitent toujours une liste, un motif de liste ou
 une opération d’indexation.
 
+= Formats de fichier
+
+LSTM natif et JSON5 décrivent le même modèle. Le format dépend du contenu,
+indépendamment de l’extension (y compris `.lstm`). Après un éventuel BOM UTF-8,
+les espaces et les commentaires initiaux (`//` ou `/* ... */`), une accolade
+ouvrante `{` indique JSON5 ; sinon, un nom de champ natif est attendu.
+Un fichier vide représente un modèle natif vide. Une entrée invalide est une
+erreur dans le format choisi, sans réinterprétation dans l’autre format.
+
+= Structure du document LSTM natif
+
+== Champs, blocs et valeurs par défaut
+
+Chaque champ s’écrit `champ: valeur;`, dans un ordre quelconque. Tous sont
+facultatifs ; un champ inconnu ou répété est une erreur. Aucune accolade
+n’entoure le document entier. *Seules les accolades `{...}` délimitent les blocs* :
+`globals`, `meta`, `symbols`, `growth`, `draw` et les `locals` des règles.
+Les entrées sont séparées par des virgules ; une virgule finale est autorisée.
+Les crochets gardent leur sens dans les mots, motifs de contexte et formules,
+mais ne peuvent pas remplacer les accolades d’un bloc.
+
+#table(
+  columns: (auto, 1fr, auto),
+  table.header([Champ], [Valeur native], [Défaut]),
+  [`version`], [Version entière du format ; seule `3` est acceptée.], [`3`],
+  [`name`, `description`], [Chaînes littérales.], [`""`],
+  [`meta`], [Bloc de clés, identificateurs ou chaînes, associées à des chaînes littérales ; clés distinctes.], [`{}`],
+  [`width`, `height`], [Formules produisant des dimensions entières strictement positives.], [`1000`, `800`],
+  [`bg`], [Formule produisant un entier RGB entre `0x000000` et `0xFFFFFF`.], [`#FFFFFF`],
+  [`recommended_iterations`], [Entier littéral positif ou nul.], [`5`],
+  [`reclim`], [Formule produisant une limite de récursion de dessin entière positive ou nulle.], [`128`],
+  [`seed`], [Entier ou chaîne littérale.], [absent],
+  [`globals`], [Liaisons ordonnées `nom: formule`.], [`{}`],
+  [`axiom`], [Mot pouvant contenir des insertions de formules.], [mot vide],
+  [`symbols`], [Tokens avec arguments par défaut facultatifs.], [`{}`],
+  [`growth`, `draw`], [Blocs de règles de croissance et de dessin récursif.], [`{}`],
+)
+
+Le champ détermine l’interprétation de sa valeur : `axiom: ABC;` contient
+trois tokens, tandis que `globals: {label: "ABC"};` définit une chaîne.
+Les formules et les mots ne sont pas entourés de guillemets JSON5.
+Une déclaration contient uniquement un symbole et ses arguments par défaut,
+comme dans `symbols: {A{n: 3}, B};`.
+
+Tous les champs sont recueillis avant l’évaluation des variables globales,
+une seule fois dans l’ordre de déclaration. Ainsi, `width: 20*step;` peut
+précéder `globals: {unit: 6, step: 3*unit};`. Les dimensions, le fond et la
+limite de récursion du dessin sont évalués après les variables globales.
+
+== Règles et limites des formules
+
+```text
+regle       ::= [ nom ":" ] predecesseur { clause } "=>" mot ;
+predecesseur ::= [ motifGauche "<" ] motifToken [ ">" motifDroit ] ;
+clause      ::= "when" expression | "weight" nombre
+              | "specificity" entier | "locals" liaisons ;
+liaisons    ::= "{" [ argument { "," argument } [ "," ] ] "}" ;
+```
+
+Le nom d’une règle est un identificateur ou une chaîne entre guillemets.
+Chaque clause peut apparaître une seule fois, dans un ordre quelconque.
+`when` doit retourner un booléen et ne voit pas les `locals`.
+`weight` est un nombre littéral fini, positif ou nul, valant `1` par défaut.
+`specificity` est un entier littéral ; par défaut, elle compte les contraintes
+d’arguments du token central, plus une par côté de contexte précisé.
+Seuls les `locals` de la règle choisie sont évalués, dans l’ordre de déclaration,
+avant son successeur.
+
+La virgule suivant un successeur termine la règle ; l’accolade fermante termine
+le bloc. Un successeur vide efface son token : `growth: {A =>};`.
+Les délimiteurs dans un argument, une répétition de contexte ou une formule
+appartiennent à cette construction : `B[2,4]`, `fn a,b -> a+b` et `${["B", "C"]}`.
+Une comparaison `<` dans une condition ou `->` dans une fonction anonyme ne
+délimite ni contexte ni règle. Les mots-clés de clause sont reconnus comme des
+identificateurs entiers à une limite de clause. Dans `A > B when x > 0`,
+le contexte droit se termine après `B` ; `A > B(when)` inclut au contraire
+les lettres `w h e n` dans ce contexte.
+
+== Espaces, commentaires et chaînes
+
+Les espaces séparent les tokens et peuvent précéder un bloc d’arguments :
+`A{x: 2}` et `A {x: 2}` sont valides. Garder `=>` et `${` contigus.
+Hors d’une chaîne, une ligne physique dont les premiers caractères non blancs
+sont `//` est un commentaire. Ailleurs dans une formule, `//` signifie la
+division entière ; `12 //` peut terminer une ligne avec le diviseur sur la
+ligne suivante. Les commentaires en fin de ligne après un champ ou une règle
+ne sont pas acceptés. Les commentaires de bloc sont permis uniquement dans
+le préambule du fichier, avant le premier champ.
+
+Les chaînes entre guillemets simples ou doubles suivent les règles des chaînes
+de formule, y compris les échappements et les sauts de ligne littéraux.
+Une ligne commençant par `//` dans une chaîne est conservée. `${...}` dans
+une chaîne reste du texte littéral. Les mots ne sont pas entre guillemets :
+écrire directement les symboles Unicode ou les produire par insertion de formule.
+Seules les chaînes de formule sont décodées, sans niveau d’échappement JSON5.
+
+== Exemple et correspondance JSON5
+
+```text
+version: 3;
+name: "Counting sprig";
+width: 1200;
+height: 780;
+bg: #FFF9EB;
+recommended_iterations: 5;
+reclim: 8;
+seed: "spring";
+globals: {step: 18, green: #528153};
+symbols: {S, I, A{n: 3}, B{turn: 0}};
+axiom: S;
+growth: {
+  germinate: S => I A,
+  "Grow a leaf pair": I < A{n: _} > $
+    when n > 0 weight 3 specificity 5
+    locals {angle: 24 + 3*n, next: n - 1}
+    => ${[{"symbol": "B", "args": {"turn": t}}
+          for t in [-angle, angle]]} I A{n: next},
+  A{n: 0} =>,
+};
+draw: {
+  I => F{length: step, width: 2, color: green},
+  B{turn: _} => [R{deg: turn} F{length: step // 2, color: green}
+                 L{size: 4, color: green}],
+  A => L{size: 2, color: green},
+};
+```
+
+La génération 1 est `I A{n: 3}`. Chaque croissance suivante produit deux
+feuilles et un segment de tige, jusqu’à l’effacement du bourgeon par le
+successeur vide à la génération 5. Les crochets de `draw` sont des tokens de
+branche ; ceux dans `${...}` sont des listes.
+
+#table(
+  columns: (1fr, 1fr),
+  table.header([LSTM natif], [JSON5]),
+  [Blocs `growth`, `draw`], [Tableaux `rules`, `drawing`],
+  [Prédécesseur avant `=>`], [Chaîne `from`],
+  [Successeur après `=>`], [Chaîne `to`],
+  [Clause `when`], [Champ `cond`],
+  [Nom facultatif avant `:`], [Champ `name`],
+  [Clauses `weight`, `specificity`, `locals`], [Champs de mêmes noms],
+)
+
+Les sections JSON5 suivantes décrivent l’autre enveloppe. La sémantique des
+mots, des motifs, de la réécriture et du dessin s’applique aux deux formats ;
+les références à `from`, `to` et `cond` s’appliquent aussi aux constructions
+natives correspondantes.
+
 = Structure du document JSON5
 
 == Enveloppe et types
 
-Le document doit être un objet JSON5, mais utilise généralement l'extension `.lstm`.
+Dans ce format, le document est un objet JSON5, souvent avec l’extension `.lstm`.
 
 #table(
   columns: (auto, auto, auto, 1fr),
   table.header([Champ], [Type], [Défaut], [Signification]),
   [`name`], [`str`], [`""`], [Nom affichable du modèle.],
+  [`description`], [`str`], [`""`], [Texte descriptif sans effet sur la réécriture.],
+  [`meta`], [`object`], [`{}`], [Métadonnées supplémentaires à valeurs de chaîne.],
   [`recommended_iterations`], [`int`], [`5`], [Nombre de réécritures recommandé après l’axiome, positif ou nul pour une séquence finie.],
   [`axiom`], [`str`], [`""`], [Mot initial, avant toute réécriture.],
   [`symbols`], [`list`], [`[]`], [Déclarations sous forme de chaînes, avec arguments par défaut facultatifs.],
@@ -106,7 +256,7 @@ Le document doit être un objet JSON5, mais utilise généralement l'extension `
 
 Ces champs sont facultatifs ; il est recommandé de
 les écrire explicitement. Un document `{}` représente donc un modèle vide.
-Les champs supplémentaires à la racine, tels que `description` ou `notes`,
+Les champs supplémentaires à la racine, tels que `notes`,
 sont des métadonnées sans effet sur les règles du modèle.
 
 Les types et les domaines énoncés dans ce document constituent le contrat de
@@ -117,7 +267,7 @@ du langage de formules, telles que `nan()` et `inf()`, suivent sa propre
 référence et ne dispensent pas de respecter le domaine du champ concerné.
 
 Dans les valeurs de `globals` et de `locals`, ainsi que dans les champs
-`cond`, `bg`, `width` et `height`, une chaîne contient une formule ;
+`cond`, `bg`, `width`, `height` et `reclim`, une chaîne contient une formule ;
 une valeur littérale peut être écrite directement, par exemple
 `locals: {pas: 2}` ou `cond: true`. Une chaîne littérale doit donc être citée
 à l’intérieur de la formule, par exemple `globals: {titre: "'Arbre'"}`.
@@ -220,7 +370,7 @@ argument  ::= identificateur ":" expression ;
 
 Un symbole est un *seul groupe de graphèmes étendu Unicode*. Pour éviter
 toute ambiguïté, un symbole conforme ne doit être ni un espace ni l’un des
-délimiteurs `{`, `}`, `:`, `,`, `'` ou `"`, ni l’un des caractères réservés
+délimiteurs `{`, `}`, `:`, `,`, `;`, `=`, `'` ou `"`, ni l’un des caractères réservés
 aux motifs de contexte : `+`, `.`, `-`, `*`, `^`, `$`, `|`, `?`, `>`, `<`.
 Les caractères `[` et `]` sont
 autorisés comme symboles autonomes et servent aux embranchements du dessin et du contexte.
@@ -229,8 +379,9 @@ constituer un seul symbole, même si NFC ne possède aucune forme précomposée 
 
 Les tokens sont juxtaposés, avec ou sans espaces entre eux : `ABC` est le mot
 de trois tokens `A`, `B`, `C`. Il ne désigne pas un symbole nommé `ABC`.
-Le bloc d’arguments doit suivre immédiatement le symbole : écrire
-`A{x: 2}`, et non `A {x: 2}` ni `A:{x: 2}`.
+Dans les mots contenus dans des chaînes JSON5, le bloc d’arguments doit suivre
+immédiatement le symbole : écrire `A{x: 2}`. Les mots natifs acceptent aussi
+`A {x: 2}`. Aucun des deux formats n’accepte `A:{x: 2}`.
 
 ```text
 A
@@ -268,7 +419,7 @@ Les arguments devraient posséder des noms distincts. En cas de répétition
 d’un nom, seule la dernière expression est conservée ; les
 expressions précédentes de ce nom ne sont pas évaluées.
 
-== Deux niveaux d’échappement
+== Deux niveaux d’échappement en JSON5
 
 Le lecteur JSON5 décode d’abord la chaîne contenant le mot. Le lecteur des
 formules décode ensuite les chaînes présentes dans les arguments. Il faut
@@ -438,7 +589,7 @@ pas une priorité de type « première règle correspondante ».
 Si les règles retenues ont des poids $w_1, dots, w_k$ et une somme $W > 0$,
 la probabilité nominale de choisir la règle $i$ est $w_i / W$. Les poids
 n’ont pas besoin de totaliser un. Des poids `3` et `1` représentent ainsi
-les proportions trois quarts et un quart. Les poids sont des nombres JSON5
+les proportions trois quarts et un quart. Dans les deux formats, les poids sont des nombres littéraux
 fixes, et non des chaînes de formules.
 
 Sans règle sélectionnée, la croissance conserve le token et le dessin le traite comme terminal.

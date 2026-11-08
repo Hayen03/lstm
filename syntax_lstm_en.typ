@@ -23,7 +23,7 @@
   #text(17pt)[LSTM file structure and the use of formulas]
   #v(9mm)
   #v(7mm)
-  Reference date: November 6, 2026
+  Reference date: November 7, 2026
 ]
 #v(16mm)
 This document defines the structure of LSTM models, the syntax of words, and
@@ -46,7 +46,7 @@ The word *recommended* expresses an authoring convention.
 
 A model uses three distinct syntactic levels.
 
-+ The *JSON5 document* contains metadata, the axiom, symbol definitions,
++ The *native LSTM or JSON5 document* contains metadata, the axiom, symbol definitions,
   and growth and drawing rules.
 + A Lindenmayer system *word* is a string containing an ordered sequence
   of tokens. A token associates a symbol with named arguments.
@@ -79,16 +79,156 @@ brackets indicate an optional argument and must not be copied literally.
 `x...` denotes a variable number of arguments. In an actual formula, square
 brackets always delimit a list, a list pattern, or an indexing operation.
 
+= File formats
+
+Native LSTM and JSON5 describe the same model. The format is determined by
+the contents, independently of the extension (including `.lstm`). After an
+optional UTF-8 BOM, whitespace, and leading comments (`//` or `/* ... */`),
+an opening `{` selects JSON5; otherwise a native field name is expected.
+An empty file is an empty native model. Invalid input is an error in the
+selected format, without reinterpretation as the other format.
+
+= Native LSTM document structure
+
+== Fields, blocks, and defaults
+
+Write each field as `field: value;`, in any order. All fields are optional;
+unknown or repeated fields are errors. There is no enclosing document brace.
+*Only braces `{...}` delimit blocks*: `globals`, `meta`, `symbols`, `growth`,
+`draw`, and rule `locals`. Commas separate entries; a trailing comma is allowed.
+Square brackets retain their meaning in words, context patterns, and formulas,
+but cannot replace block braces.
+
+#table(
+  columns: (auto, 1fr, auto),
+  table.header([Field], [Native value], [Default]),
+  [`version`], [Integer format version; only `3` is supported.], [`3`],
+  [`name`, `description`], [String literals.], [`""`],
+  [`meta`], [Block of identifier or quoted keys mapped to string literals; keys must be distinct.], [`{}`],
+  [`width`, `height`], [Formulas yielding strictly positive integer dimensions.], [`1000`, `800`],
+  [`bg`], [Formula yielding an RGB integer in `0x000000`–`0xFFFFFF`.], [`#FFFFFF`],
+  [`recommended_iterations`], [Nonnegative integer literal.], [`5`],
+  [`reclim`], [Formula yielding a nonnegative drawing recursion limit.], [`128`],
+  [`seed`], [Integer or string literal.], [absent],
+  [`globals`], [Ordered `name: formula` bindings.], [`{}`],
+  [`axiom`], [Word, optionally containing splices.], [empty word],
+  [`symbols`], [Tokens with optional default arguments.], [`{}`],
+  [`growth`, `draw`], [Growth and recursive drawing rule blocks.], [`{}`],
+)
+
+The field determines how to interpret its value: `axiom: ABC;` contains three
+tokens, whereas `globals: {label: "ABC"};` defines one string. Formulas and words
+have no surrounding JSON5 quotes. Symbol declarations contain only a symbol
+and its default arguments, as in `symbols: {A{n: 3}, B};`.
+
+All fields are collected before evaluating globals, once in declaration order.
+Thus `width: 20*step;` can precede `globals: {unit: 6, step: 3*unit};`.
+Dimensions, background, and drawing recursion limit are evaluated after globals.
+
+== Rules and formula boundaries
+
+```text
+rule        ::= [ name ":" ] predecessor { clause } "=>" word ;
+predecessor ::= [ leftPattern "<" ] tokenPattern [ ">" rightPattern ] ;
+clause      ::= "when" expression | "weight" number
+              | "specificity" integer | "locals" bindings ;
+bindings    ::= "{" [ argument { "," argument } [ "," ] ] "}" ;
+```
+
+A rule name is an identifier or a quoted string. Each clause may occur once,
+in any order. `when` must return a boolean; it cannot see `locals`.
+`weight` is a finite nonnegative numeric literal, defaulting to `1`.
+`specificity` is an integer literal; when omitted it counts central argument
+constraints plus one per specified context side. Only the selected rule's
+locals are evaluated, in declaration order, before its successor.
+
+The comma after a successor ends the rule; the closing brace ends the block.
+An empty successor erases its token: `growth: {A =>};`. Delimiters inside an
+argument, context repetition, or formula belong to that construct, as in
+`B[2,4]`, `fn a,b -> a+b`, and `${["B", "C"]}`. A comparison `<` in a guard
+or `->` in a lambda does not delimit a context or rule.
+Clause keywords are recognized as whole identifiers at clause boundaries.
+In `A > B when x > 0`, the right context ends after `B`; `A > B(when)`
+instead includes the letters `w h e n` in that context.
+
+== Whitespace, comments, and strings
+
+Whitespace separates tokens and may precede an argument block: both `A{x: 2}`
+and `A {x: 2}` are valid. Keep `=>` and `${` intact.
+Outside a string, a physical line whose first non-whitespace characters are
+`//` is a comment. Elsewhere in a formula, `//` means floor division;
+`12 //` may end a line with the divisor on the next line. Inline comments
+after a field or rule are not supported. Block comments are allowed only in
+the file prelude, before the first field.
+
+Single- and double-quoted strings follow the formula string rules, including
+escapes and literal newlines. A line beginning with `//` inside a string is
+preserved. `${...}` inside a string remains literal text. Words themselves are
+unquoted; write Unicode symbols directly, or generate them with a splice.
+Only formula strings are decoded, without an additional JSON5 escaping layer.
+
+== Example and JSON5 correspondence
+
+```text
+version: 3;
+name: "Counting sprig";
+width: 1200;
+height: 780;
+bg: #FFF9EB;
+recommended_iterations: 5;
+reclim: 8;
+seed: "spring";
+globals: {step: 18, green: #528153};
+symbols: {S, I, A{n: 3}, B{turn: 0}};
+axiom: S;
+growth: {
+  germinate: S => I A,
+  "Grow a leaf pair": I < A{n: _} > $
+    when n > 0 weight 3 specificity 5
+    locals {angle: 24 + 3*n, next: n - 1}
+    => ${[{"symbol": "B", "args": {"turn": t}}
+          for t in [-angle, angle]]} I A{n: next},
+  A{n: 0} =>,
+};
+draw: {
+  I => F{length: step, width: 2, color: green},
+  B{turn: _} => [R{deg: turn} F{length: step // 2, color: green}
+                 L{size: 4, color: green}],
+  A => L{size: 2, color: green},
+};
+```
+
+Generation 1 is `I A{n: 3}`. Each subsequent growth step emits two leaves
+and a stem segment, until the empty successor removes the bud at generation 5.
+The square brackets in `draw` are branch tokens; those inside `${...}` are lists.
+
+#table(
+  columns: (1fr, 1fr),
+  table.header([Native LSTM], [JSON5]),
+  [`growth`, `draw` blocks], [`rules`, `drawing` arrays],
+  [Predecessor before `=>`], [`from` string],
+  [Successor after `=>`], [`to` string],
+  [`when` clause], [`cond` field],
+  [Optional name before `:`], [`name` field],
+  [`weight`, `specificity`, `locals` clauses], [Fields with the same names],
+)
+
+The following JSON5 sections describe the alternative wrapper. The word,
+matching, rewriting, and drawing semantics apply to both formats; references
+to `from`, `to`, and `cond` also apply to the corresponding native constructs.
+
 = JSON5 document structure
 
 == Top-level object and types
 
-The document must be a JSON5 object, but usually uses the `.lstm` extension.
+In this format, the document is a JSON5 object, often with the `.lstm` extension.
 
 #table(
   columns: (auto, auto, auto, 1fr),
   table.header([Field], [Type], [Default], [Meaning]),
   [`name`], [`str`], [`""`], [Display name of the model.],
+  [`description`], [`str`], [`""`], [Descriptive text without an effect on rewriting.],
+  [`meta`], [`object`], [`{}`], [Additional metadata with string values.],
   [`recommended_iterations`], [`int`], [`5`], [Recommended number of rewrites after the axiom; nonnegative for a finite sequence.],
   [`axiom`], [`str`], [`""`], [Initial word, before any rewriting.],
   [`symbols`], [`list`], [`[]`], [Declarations as strings, with optional default arguments.],
@@ -104,7 +244,7 @@ The document must be a JSON5 object, but usually uses the `.lstm` extension.
 
 These fields are optional; writing them explicitly is recommended.
 A document containing `{}` therefore represents an empty model.
-Additional fields at the root, such as `description` or `notes`, are metadata
+Additional fields at the root, such as `notes`, are metadata
 with no effect on the model's rules.
 
 The types and domains stated in this document define the authoring contract.
@@ -115,7 +255,7 @@ dimensions, or colors. Special values in the formula language, such as
 requirement to respect the domain of the field concerned.
 
 In the values of `globals` and `locals`, as well as in the fields
-`cond`, `bg`, `width`, and `height`, a string contains a formula;
+`cond`, `bg`, `width`, `height`, and `reclim`, a string contains a formula;
 a literal value can be written directly, for example
 `locals: {pas: 2}` or `cond: true`. A literal string must therefore be quoted
 inside the formula, for example `globals: {titre: "'Arbre'"}`.
@@ -215,7 +355,7 @@ argument  ::= identifier ":" expression ;
 
 A symbol is a *single Unicode extended grapheme cluster*. To avoid
 ambiguity, a valid symbol must not be whitespace or one of the delimiters
-`{`, `}`, `:`, `,`, `'`, or `"`, nor one of the characters reserved for
+`{`, `}`, `:`, `,`, `;`, `=`, `'`, or `"`, nor one of the characters reserved for
 context patterns: `+`, `.`, `-`, `*`, `^`, `$`, `|`, `?`, `>`, `<`.
 The characters `[` and `]` are allowed as standalone symbols and define
 branches in drawing and context.
@@ -224,8 +364,9 @@ constitute one symbol, including when NFC has no precomposed form for it.
 
 Tokens are juxtaposed, with or without spaces between them: `ABC` is a word
 of three tokens, `A`, `B`, and `C`. It does not denote a symbol named `ABC`.
-The argument block must immediately follow the symbol: write
-`A{x: 2}`, not `A {x: 2}` or `A:{x: 2}`.
+In JSON5 word strings, the argument block must immediately follow the symbol:
+write `A{x: 2}`. Native words also accept `A {x: 2}`. Neither format accepts
+`A:{x: 2}`.
 
 ```text
 A
@@ -260,7 +401,7 @@ has two parameters, and then `couleur` begins a new token argument.
 Arguments should have distinct names. When a name is repeated, only the
 last expression is retained; previous expressions for that name are not evaluated.
 
-== Two levels of escaping
+== Two levels of escaping in JSON5
 
 The JSON5 reader first decodes the string containing the word. The formula
 reader then decodes the strings inside the arguments. Escapes intended for
@@ -445,7 +586,7 @@ intuitively more restrictive. File order does not establish a
 If the retained rules have weights $w_1, dots, w_k$ and a sum $W > 0$,
 the nominal probability of selecting rule $i$ is $w_i / W$. Weights need
 not sum to one. Weights of `3` and `1` thus represent proportions of
-three quarters and one quarter. Weights are fixed JSON5 numbers, not
+three quarters and one quarter. In both formats, weights are fixed numeric literals, not
 formula strings.
 
 When no rule is selected, growth preserves the token and drawing treats

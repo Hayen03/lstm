@@ -27,7 +27,7 @@ impl From<formulas::Expr> for Arg {
 pub type Values = IndexMap<Arc<str>, V>;
 pub type Args = IndexMap<Arc<str>, Arg>;
 pub const DRAW: &str = "FRL()MCWPDH";
-pub const META: &str = "+.-*^$|?><";
+pub const META: &str = "+.-*^$|?><,;=";
 #[derive(Clone, Debug)]
 /// A symbol with unevaluated argument expressions, as written in a model.
 pub struct Template {
@@ -115,7 +115,7 @@ fn token_symbol(source: &str) -> Result<Arc<str>> {
 }
 
 fn reserved(ch: &str) -> bool {
-    META.contains(ch) || r#"{}:,"'"#.contains(ch)
+    ch.chars().all(char::is_whitespace) || META.contains(ch) || r#"{}:,"'"#.contains(ch)
 }
 
 /// Parse one complete field, unlike `parse_next`, which also serves word boundaries.

@@ -9,7 +9,7 @@ cargo build --release
 ./target/release/lstm lstms/lindenmayer_algae.lstm
 ```
 
-Usage: `lstm [OPTIONS] <FILE>`, where `<FILE>` is a JSON5 L-system model (examples are in `lstms/`). You can also run it with `cargo run --release -- <FILE> [OPTIONS]`.
+Usage: `lstm [OPTIONS] <FILE>`, where `<FILE>` is a native LSTM or JSON5 L-system model (JSON5 examples are in `lstms/`; a native example is in [`tests/fixtures/counting_sprig.lstm`](tests/fixtures/counting_sprig.lstm)). The format is detected from the contents, so existing JSON5 `.lstm` files remain supported. You can also run it with `cargo run --release -- <FILE> [OPTIONS]`.
 
 By default, the program opens a window displaying the final generation. Close the window or press Escape to exit. Use `--animate` to display successive generations, or `--output` to render without opening a window.
 
@@ -60,6 +60,6 @@ Trace filters and `--trace-draw` also enable tracing. For example:
 ./target/release/lstm lstms/lindenmayer_algae.lstm -n 3 -o algae.png --trace-output trace.jsonl --trace-format jsonl --trace-generations 0:3
 ```
 
-The full syntax is described in `syntax_lstm_en.pdf`
+Both file formats are described in [English](syntax_lstm_en.pdf) and [French](syntax_lstm_fr.pdf). Native blocks use braces `{...}`; square brackets are reserved for words, context patterns, and formula constructs.
 
 [This program is dependant on my `formulas` crate available here](https://github.com/Hayen03/formulas).

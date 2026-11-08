@@ -35,6 +35,8 @@ pub(crate) struct Rule {
 /// Parsed model definitions and the formula engine shared by all generations.
 pub struct Model {
     pub name: String,
+    pub description: String,
+    pub meta: indexmap::IndexMap<String, String>,
     pub iterations: i64,
     pub bg: u32,
     pub width: u32,

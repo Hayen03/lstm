@@ -64,3 +64,28 @@ fn png_and_gif_render_headlessly() -> Result<(), Box<dyn std::error::Error>> {
     assert_eq!(count, 3);
     Ok(())
 }
+
+#[test]
+fn native_and_json5_render_identically_regardless_of_extension()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempdir()?;
+    // Existing JSON5 .lstm files and native files with other extensions both work.
+    let json5 = dir.path().join("legacy.lstm");
+    let native = dir.path().join("native.txt");
+    fs::write(
+        &json5,
+        r##"{axiom:'A',symbols:['A'],rules:[{from:'A',to:'AA'}],drawing:[{from:'A',to:'F{length:12,width:3,color:#dd0000}'}]}"##,
+    )?;
+    fs::write(
+        &native,
+        "\u{feff}// native model\nsymbols: {A}; axiom: A; growth: {A => AA}; draw: {A => F{length:12,width:3,color:#dd0000}};",
+    )?;
+    for extension in ["png", "gif"] {
+        let a = dir.path().join(format!("legacy.{extension}"));
+        let b = dir.path().join(format!("native.{extension}"));
+        render(&json5, &a)?;
+        render(&native, &b)?;
+        assert_eq!(fs::read(a)?, fs::read(b)?);
+    }
+    Ok(())
+}
