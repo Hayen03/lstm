@@ -1,0 +1,36 @@
+version: 3;
+name: "Counting sprig";
+description: "Each new stem segment carries two leaves.
+The last bud disappears after the third pair.";
+width: 1200;
+height: 780;
+bg: #FFF9EB;
+recommended_iterations: 5;
+reclim: 8;
+seed: "spring";
+
+globals: { step: 18, green: #528153 };
+symbols: {S, I, A{n: 3}, B{turn: 0}};
+axiom: S;
+
+growth: {
+    germinate: S => I A,
+
+    // A bud at the end of the stem produces two angled leaves.
+    "Grow a leaf pair": I < A{n: _} > $
+        when n > 0
+        weight 3
+        specificity 5
+        locals { angle: 24 + 3*n, next: n - 1 }
+        => ${[{"symbol": "B", "args": {"turn": t}} for t in [-angle, angle]]}
+           I A{n: next},
+
+    A{n: 0} => ,
+};
+
+draw: {
+    I => F{length: step, width: 2, color: green},
+    B{turn: _} => [R{deg: turn} F{length: step // 2, color: green}
+                   L{size: 4, color: green}],
+    A => L{size: 2, color: green},
+};

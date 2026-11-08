@@ -11,3 +11,5 @@
 
 - [x] Normalize symbols to Unicode NFC so canonically equivalent spellings match in declarations, rules, contexts, and trace symbol filters. Preserve case and compatibility distinctions.
 - [x] configurable recursion limit.
+- [ ] Add support for unicode escape seq in words. A word such as `E\u0301{x:5}` should be parsed as one symbol `é{x:5}` instead of 2.
+- [ ] Allow formulas in field that would ordinarily use literals in the native file format (such as `name`, `weight`, etc.)

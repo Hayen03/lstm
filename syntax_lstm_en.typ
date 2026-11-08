@@ -93,11 +93,9 @@ selected format, without reinterpretation as the other format.
 == Fields, blocks, and defaults
 
 Write each field as `field: value;`, in any order. All fields are optional;
-unknown or repeated fields are errors. There is no enclosing document brace.
-*Only braces `{...}` delimit blocks*: `globals`, `meta`, `symbols`, `growth`,
-`draw`, and rule `locals`. Commas separate entries; a trailing comma is allowed.
-Square brackets retain their meaning in words, context patterns, and formulas,
-but cannot replace block braces.
+unknown or repeated fields are errors. Braces `{...}` delimit blocks: `globals`, `meta`, `symbols`, `growth`, `draw`, and rule `locals` use blocks.
+The elements of a block are separated by commas.
+Trailing commas are allowed, and encouraged.
 
 #table(
   columns: (auto, 1fr, auto),
@@ -154,7 +152,7 @@ instead includes the letters `w h e n` in that context.
 == Whitespace, comments, and strings
 
 Whitespace separates tokens and may precede an argument block: both `A{x: 2}`
-and `A {x: 2}` are valid. Keep `=>` and `${` intact.
+and `A {x: 2}` are valid.
 Outside a string, a physical line whose first non-whitespace characters are
 `//` is a comment. Elsewhere in a formula, `//` means floor division;
 `12 //` may end a line with the divisor on the next line. Inline comments
@@ -299,11 +297,6 @@ With `symbols: ["A{x: 2}"]`, the occurrences `A` and `A{x: 5}` receive 2 and 5
 respectively. An undeclared symbol remains usable and has no default arguments.
 Drawing primitives are reserved.
 
-A declaration contains only the symbol and its default arguments.
-Objects containing `symbol`, `drawing`, or `locals` are not valid declarations.
-A symbol's drawing is defined by a rule in the `drawing` list, with any
-associated `locals` variables.
-
 == Defining a rule
 
 The `rules` and `drawing` lists use the same format.
@@ -365,8 +358,7 @@ constitute one symbol, including when NFC has no precomposed form for it.
 Tokens are juxtaposed, with or without spaces between them: `ABC` is a word
 of three tokens, `A`, `B`, and `C`. It does not denote a symbol named `ABC`.
 In JSON5 word strings, the argument block must immediately follow the symbol:
-write `A{x: 2}`. Native words also accept `A {x: 2}`. Neither format accepts
-`A:{x: 2}`.
+write `A{x: 2}`.
 
 ```text
 A

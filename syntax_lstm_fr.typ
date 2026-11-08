@@ -95,12 +95,10 @@ erreur dans le format choisi, sans réinterprétation dans l’autre format.
 == Champs, blocs et valeurs par défaut
 
 Chaque champ s’écrit `champ: valeur;`, dans un ordre quelconque. Tous sont
-facultatifs ; un champ inconnu ou répété est une erreur. Aucune accolade
-n’entoure le document entier. *Seules les accolades `{...}` délimitent les blocs* :
-`globals`, `meta`, `symbols`, `growth`, `draw` et les `locals` des règles.
-Les entrées sont séparées par des virgules ; une virgule finale est autorisée.
-Les crochets gardent leur sens dans les mots, motifs de contexte et formules,
-mais ne peuvent pas remplacer les accolades d’un bloc.
+facultatifs ; un champ inconnu ou répété est une erreur.Les accolades `{...}` délimitent les blocs :
+`globals`, `meta`, `symbols`, `growth`, `draw` et les `locals` des règles utilisent des blocs.
+Les éléments d’un bloc sont séparés par des virgules. 
+Les virgules finales sont autorisées et encouragées.
 
 #table(
   columns: (auto, 1fr, auto),
@@ -162,7 +160,7 @@ les lettres `w h e n` dans ce contexte.
 == Espaces, commentaires et chaînes
 
 Les espaces séparent les tokens et peuvent précéder un bloc d’arguments :
-`A{x: 2}` et `A {x: 2}` sont valides. Garder `=>` et `${` contigus.
+`A{x: 2}` et `A {x: 2}` sont valides.
 Hors d’une chaîne, une ligne physique dont les premiers caractères non blancs
 sont `//` est un commentaire. Ailleurs dans une formule, `//` signifie la
 division entière ; `12 //` peut terminer une ligne avec le diviseur sur la
@@ -313,11 +311,6 @@ par défaut. Dans `symbols: ["A{x: 2}"]`, les occurrences `A` et `A{x: 5}`
 reçoivent respectivement 2 et 5. Un symbole sans déclaration reste utilisable
 et ne possède aucun argument par défaut. Les primitives de dessin sont réservées.
 
-Une déclaration contient uniquement le symbole et ses arguments par défaut.
-Les objets contenant `symbol`, `drawing` ou `locals` ne sont pas des déclarations
-valides. Le dessin d’un symbole se définit dans une règle de la liste `drawing`,
-avec ses éventuelles variables `locals`.
-
 == Définition d’une règle
 
 Les listes `rules` et `drawing` utilisent le même format.
@@ -381,7 +374,7 @@ Les tokens sont juxtaposés, avec ou sans espaces entre eux : `ABC` est le mot
 de trois tokens `A`, `B`, `C`. Il ne désigne pas un symbole nommé `ABC`.
 Dans les mots contenus dans des chaînes JSON5, le bloc d’arguments doit suivre
 immédiatement le symbole : écrire `A{x: 2}`. Les mots natifs acceptent aussi
-`A {x: 2}`. Aucun des deux formats n’accepte `A:{x: 2}`.
+`A {x: 2}`.
 
 ```text
 A
