@@ -226,8 +226,7 @@ impl<'a> Parser<'a> {
             self.expect("}")?;
             return Ok(format!("${{{raw}}}"));
         }
-        let symbol = self
-            .rest()
+        let symbol = self.rest()
             .graphemes(true)
             .next()
             .ok_or_else(|| self.error("Expected a symbol"))?
@@ -244,7 +243,7 @@ impl<'a> Parser<'a> {
                 .join(",");
             Ok(format!("{symbol}{{{args}}}"))
         } else {
-            Ok(symbol)
+            Ok(symbol.to_owned())
         }
     }
 
@@ -264,6 +263,7 @@ impl<'a> Parser<'a> {
             if close == '}' && self.rest().starts_with('}') {
                 break;
             }
+            
             let token = self.token()?;
             output.push_str(&token);
             output.push(' ');
