@@ -10,7 +10,7 @@ use crate::{
     syntax::*,
     trace::Trace,
 };
-use formulas::{Env, EvalValue as V, FormulaEngine, Function};
+use formulas::{Env, EvalKey, EvalValue as V, FormulaEngine, Function};
 use serde_json::{Value, json};
 use std::collections::VecDeque;
 use std::{
@@ -695,7 +695,12 @@ fn draw(
 ) -> Result<()> {
     let Some(i) = select(runtime, rules, token, engine, tr, "drawing")? else {
         if DRAW.contains(token.ch.as_ref()) || "[]".contains(token.ch.as_ref()) {
-            tr.event("drawing","instruction",||json!({"instruction":token.ch,"arguments":display(&V::Object(token.args.clone().into()))}))?;
+            tr.event("drawing","instruction",||json!({
+                "instruction":token.ch,
+                "arguments":display(&V::Object(Arc::new(
+                    token.args.clone().into_iter().map(|(k, v)| (EvalKey(k.into()), v)).collect()
+                )))
+            }))?;
             d.apply(token)
                 .with_context(|| format!("{}, instruction {}", tr.location("drawing"), token.ch))?;
             runtime.sync(d);

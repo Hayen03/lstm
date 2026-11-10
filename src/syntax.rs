@@ -3,7 +3,7 @@
 //! appear inside an argument without splitting the surrounding symbol.
 
 use crate::err::{Result, ResultContext, SyntaxError, ensure};
-use formulas::{EvalValue as V, Expr, parse_next};
+use formulas::{EvalKey, EvalValue as V, Expr, parse_next};
 use indexmap::IndexMap;
 use std::sync::Arc;
 use unicode_normalization::UnicodeNormalization;
@@ -45,8 +45,15 @@ impl Token {
     /// Exposes a token to formulas as `{symbol: ..., args: ...}`.
     pub fn value(&self) -> V {
         V::Object(Arc::new(IndexMap::from([
-            ("symbol".into(), V::String(self.ch.to_string().into())),
-            ("args".into(), V::Object(self.args.clone().into())),
+            (EvalKey("symbol".into()), V::String(self.ch.to_string().into())),
+            (EvalKey("args".into()), V::Object(
+                Arc::new(self.args
+                    .clone()
+                    .into_iter()
+                    .map(|(k, v)| (EvalKey(k.into()), v))
+                    .collect()
+                )
+            )),
         ])))
     }
 }
@@ -59,7 +66,7 @@ impl TryFrom<V> for Token {
                 args: IndexMap::new(),
             }),
             V::Object(data) => {
-                let ch = match data.get("symbol") {
+                let ch = match data.get(&EvalKey("symbol".into())) {
                     Some(V::String(s)) => token_symbol(s).context("token field symbol")?,
                     Some(other) => {
                         return Err(crate::Error::InvalidToken(format!(
@@ -71,7 +78,7 @@ impl TryFrom<V> for Token {
                         return Err(crate::Error::InvalidToken("Missing 'symbol' field".into()));
                     }
                 };
-                let args = match data.get("args") {
+                let args = match data.get(&EvalKey("args".into())) {
                     Some(V::Object(map)) => map.as_ref().clone(),
                     Some(other) => {
                         return Err(crate::Error::InvalidToken(format!(
@@ -81,7 +88,18 @@ impl TryFrom<V> for Token {
                     }
                     None => IndexMap::new(),
                 };
-                Ok(Token { ch, args })
+                let mut map = IndexMap::new();
+                for (k, v) in args {
+                    let k = match k.0 {
+                        V::String(s) => s,
+                        _ => return Err(crate::Error::InvalidToken(format!(
+                            "Expected a string for argument key, got {}",
+                            k.0.repr()
+                        ))),
+                    };
+                    map.insert(k, v);
+                }
+                Ok(Token { ch, args: map })
             }
             other => Err(crate::Error::InvalidToken(format!(
                 "Expected a string or object, got {}",
@@ -272,7 +290,9 @@ pub fn single(s: &str) -> Result<Template> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use formulas::EvalKey;
+
+use super::*;
 
     #[test]
     fn splice_delimiters_and_unicode_argument_boundaries() -> Result<()> {
@@ -294,10 +314,10 @@ mod tests {
         for source in ["e\u{301}", "👩‍🔬", "F", "[", "]"] {
             let literal = Token::try_from(V::String(source.into()))?;
             let object = V::Object(Arc::new(IndexMap::from([
-                ("symbol".into(), V::String(source.into())),
+                (EvalKey("symbol".into()), V::String(source.into())),
                 (
-                    "args".into(),
-                    V::Object(Arc::new(IndexMap::from([("x".into(), V::Int(7))]))),
+                    EvalKey("args".into()),
+                    V::Object(Arc::new(IndexMap::from([(EvalKey("x".into()), V::Int(7))]))),
                 ),
             ])));
             let token = Token::try_from(object)?;
@@ -309,7 +329,7 @@ mod tests {
             for value in [
                 V::String(source.into()),
                 V::Object(Arc::new(IndexMap::from([(
-                    "symbol".into(),
+                    EvalKey("symbol".into()),
                     V::String(source.into()),
                 )]))),
             ] {
