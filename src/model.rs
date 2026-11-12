@@ -126,7 +126,13 @@ fn display(v: &V) -> Value {
         V::Array(xs) => Value::Array(xs.iter().map(display).collect()),
         V::Object(xs) => Value::Object(
             xs.iter()
-                .map(|(k, v)| (k.to_string(), display(v)))
+                .map(|(k, v)| {
+                    let key = match &k.0 {
+                        V::String(name) => name.to_string(),
+                        _ => k.to_string(),
+                    };
+                    (key, display(v))
+                })
                 .collect(),
         ),
         V::Func(f) => json!(f.to_string()),
@@ -693,64 +699,233 @@ fn draw(
     path: &mut Vec<Arc<str>>,
     rec_lim: usize,
 ) -> Result<()> {
-    let Some(i) = select(runtime, rules, token, engine, tr, "drawing")? else {
-        if DRAW.contains(token.ch.as_ref()) || "[]".contains(token.ch.as_ref()) {
-            tr.event("drawing","instruction",||json!({
-                "instruction":token.ch,
-                "arguments":display(&V::Object(Arc::new(
-                    token.args.clone().into_iter().map(|(k, v)| (EvalKey(k.into()), v)).collect()
-                )))
-            }))?;
-            d.apply(token)
-                .with_context(|| format!("{}, instruction {}", tr.location("drawing"), token.ch))?;
-            runtime.sync(d);
-        }
-        return Ok(());
-    };
-    path.push(token.ch.clone());
-    ensure!(
-        path.len() <= rec_lim,
-        Error::DrawingRecursion {
-            limit: rec_lim,
-            path: path
-                .iter()
-                .map(|s| s.to_string())
-                .collect::<Vec<_>>()
-                .join(" -> "),
-        }
-    );
-    let rule = &rules[i];
-    let env = bindings(runtime, rule, token, engine, tr, "drawing")?;
-    tr.event(
-        "drawing",
-        "symbol_expanded",
-        || json!({"drawing_path":path.iter().map(|s| s.to_string()).collect::<Vec<_>>()}),
-    )?;
-    for (successor, child) in rule.out.iter().enumerate() {
-        // Recursive children change the selected rule in the shared trace. Restore
-        // the parent's identity before each sibling and before each buffered token.
-        tr.rule = Some((i, rule.name.clone()));
-        match child {
-            DeferredToken::Literal(template) => {
-                let t = actualize(runtime, symbols, engine, template, &env, tr, "drawing")?;
-                draw(runtime, symbols, rules, engine, &t, d, tr, path, rec_lim)
-                    .map_err(|error| drawing_error(error, &rule.name, i, successor, None))?;
-            }
-            DeferredToken::Func(expr) => {
-                let items = eval_splice(expr, engine, &env, runtime, tr, "drawing", successor)?;
-                for item in items {
-                    tr.rule = Some((i, rule.name.clone()));
-                    let element = item.element;
-                    let t =
-                        finish_spliced_token(item, runtime, symbols, engine, &env, tr, "drawing")?;
-                    draw(runtime, symbols, rules, engine, &t, d, tr, path, rec_lim).map_err(
-                        |error| drawing_error(error, &rule.name, i, successor, Some(element)),
-                    )?;
+    #[derive(Clone)]
+    struct CallSite {
+        rule: String,
+        index: usize,
+        successor: usize,
+        element: Option<usize>,
+    }
+
+    enum Frame {
+        Token { token: Token, call_site: Option<CallSite> },
+        Expand {
+            call_site: Option<CallSite>,
+            rule_index: usize,
+            rule_name: String,
+            env: Env<'static>,
+            successor: usize,
+            splice: Option<VecDeque<SplicedToken>>,
+        },
+    }
+
+    fn wrap_drawing_error(error: Error, call_site: &CallSite) -> Error {
+        drawing_error(
+            error,
+            &call_site.rule,
+            call_site.index,
+            call_site.successor,
+            call_site.element,
+        )
+    }
+
+    let mut stack = Vec::new();
+    stack.push(Frame::Token {
+        token: token.clone(),
+        call_site: None,
+    });
+
+    while let Some(frame) = stack.pop() {
+        let frame_call_site = match &frame {
+            Frame::Token { call_site, .. } => call_site.clone(),
+            Frame::Expand { call_site, .. } => call_site.clone(),
+        };
+
+        let result: Result<()> = (|| {
+            match frame {
+                Frame::Token { token, call_site } => {
+                    let selected = select(runtime, rules, &token, engine, tr, "drawing")?;
+                    let Some(rule_index) = selected else {
+                        if DRAW.contains(token.ch.as_ref()) || "[]".contains(token.ch.as_ref()) {
+                            tr.event("drawing", "instruction", || {
+                                json!({
+                                    "instruction": token.ch,
+                                    "arguments": display(&V::Object(Arc::new(
+                                        token
+                                            .args
+                                            .clone()
+                                            .into_iter()
+                                            .map(|(k, v)| (EvalKey(k.into()), v))
+                                            .collect()
+                                    )))
+                                })
+                            })?;
+                            d.apply(&token).with_context(|| {
+                                format!("{}, instruction {}", tr.location("drawing"), token.ch)
+                            })?;
+                            runtime.sync(d);
+                        }
+                        return Ok(());
+                    };
+
+                    path.push(token.ch.clone());
+                    ensure!(
+                        path.len() <= rec_lim,
+                        Error::DrawingRecursion {
+                            limit: rec_lim,
+                            path: path
+                                .iter()
+                                .map(|s| s.to_string())
+                                .collect::<Vec<_>>()
+                                .join(" -> "),
+                        }
+                    );
+
+                    let rule = &rules[rule_index];
+                    let env = bindings(runtime, rule, &token, engine, tr, "drawing")?;
+                    tr.event("drawing", "symbol_expanded", || {
+                        json!({
+                            "drawing_path": path
+                                .iter()
+                                .map(|s| s.to_string())
+                                .collect::<Vec<_>>()
+                        })
+                    })?;
+
+                    stack.push(Frame::Expand {
+                        call_site,
+                        rule_index,
+                        rule_name: rule.name.clone(),
+                        env,
+                        successor: 0,
+                        splice: None,
+                    });
+                    Ok(())
+                }
+                Frame::Expand {
+                    call_site,
+                    rule_index,
+                    rule_name,
+                    env,
+                    successor,
+                    splice,
+                } => {
+                    let rule = &rules[rule_index];
+                    if successor >= rule.out.len() {
+                        path.pop();
+                        return Ok(());
+                    }
+
+                    let parent_rule = Some((rule_index, rule_name.clone()));
+                    tr.rule = parent_rule.clone();
+                    match &rule.out[successor] {
+                        DeferredToken::Literal(template) => {
+                            let t = actualize(
+                                runtime,
+                                symbols,
+                                engine,
+                                template,
+                                &env,
+                                tr,
+                                "drawing",
+                            )?;
+                            stack.push(Frame::Expand {
+                                call_site,
+                                rule_index,
+                                rule_name: rule_name.clone(),
+                                env,
+                                successor: successor + 1,
+                                splice: None,
+                            });
+                            stack.push(Frame::Token {
+                                token: t,
+                                call_site: Some(CallSite {
+                                    rule: rule_name,
+                                    index: rule_index,
+                                    successor,
+                                    element: None,
+                                }),
+                            });
+                            Ok(())
+                        }
+                        DeferredToken::Func(expr) => {
+                            let mut items = if let Some(items) = splice {
+                                items
+                            } else {
+                                eval_splice(
+                                    expr,
+                                    engine,
+                                    &env,
+                                    runtime,
+                                    tr,
+                                    "drawing",
+                                    successor,
+                                )?
+                            };
+
+                            if let Some(item) = items.pop_front() {
+                                tr.rule = parent_rule;
+                                let element = item.element;
+                                let t = finish_spliced_token(
+                                    item,
+                                    runtime,
+                                    symbols,
+                                    engine,
+                                    &env,
+                                    tr,
+                                    "drawing",
+                                )?;
+                                stack.push(Frame::Expand {
+                                    call_site,
+                                    rule_index,
+                                    rule_name: rule_name.clone(),
+                                    env,
+                                    successor,
+                                    splice: Some(items),
+                                });
+                                stack.push(Frame::Token {
+                                    token: t,
+                                    call_site: Some(CallSite {
+                                        rule: rule_name,
+                                        index: rule_index,
+                                        successor,
+                                        element: Some(element),
+                                    }),
+                                });
+                            } else {
+                                stack.push(Frame::Expand {
+                                    call_site,
+                                    rule_index,
+                                    rule_name,
+                                    env,
+                                    successor: successor + 1,
+                                    splice: None,
+                                });
+                            }
+                            Ok(())
+                        }
+                    }
                 }
             }
+        })();
+
+        if let Err(mut error) = result {
+            if let Some(call_site) = &frame_call_site {
+                error = wrap_drawing_error(error, call_site);
+            }
+            for ancestor in stack.iter().rev() {
+                let call_site = match ancestor {
+                    Frame::Token { call_site, .. } => call_site.as_ref(),
+                    Frame::Expand { call_site, .. } => call_site.as_ref(),
+                };
+                if let Some(call_site) = call_site {
+                    error = wrap_drawing_error(error, call_site);
+                }
+            }
+            return Err(error);
         }
     }
-    path.pop();
+
     Ok(())
 }
 
@@ -1115,8 +1290,15 @@ mod tests {
         for entry in std::fs::read_dir(dir)? {
             let path = entry?.path();
             if path.extension().is_some_and(|e| e == "lstm") {
-                generations(&std::fs::read_to_string(&path)?, 1, true)
+                let src = std::fs::read_to_string(&path)?;
+                let mut d = Dessin::new(800, 600);
+                let mut m = crate::loaders::load(&src, None, "", Some("1"), None)
                     .with_context(|| format!("model {}", path.display()))?;
+                let mut trace = Trace::new(Default::default())?;
+                let mut seq: Arc<[Token]> = Vec::new().into();
+                for i in 0..=1 {
+                    seq = m.frame(seq, i, &mut d, &mut trace, true, None)?;
+                }
             }
         }
         Ok(())

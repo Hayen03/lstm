@@ -1,7 +1,7 @@
 # v3
 
 - [x] Identify LSTM symbols by Unicode extended grapheme clusters instead of individual Unicode code points, allowing a single symbol to contain multiple code points (for example, a letter with a combining accent or an emoji sequence). Apply this consistently to declarations, words, rule matching, and context patterns; update the syntax documentation and add regression coverage.
-- [ ] Custom `.lstm` file format to become independent from json5 (old json5 files will still be supported)
+- [x] Custom `.lstm` file format to become independent from json5 (old json5 files will still be supported)
 - [x] Dynamic growing and drawing rules that allow splicing the `to` field with `${...}` formulas that evaluates to a list of tokens `[{symbol: str, args: dict}...]`
 - [x] Change the origin to be at the bottom-center of the canvas (or a bit above)
 - [x] Rajouter les arguments `color` au symboles `F`, `D` et `L`, qui indique la couleur de dessin pour cette instruction sans changer la couleur de base du crayon.

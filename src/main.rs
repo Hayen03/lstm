@@ -192,7 +192,7 @@ fn run(c: Cli) -> Result<()> {
         Duration::ZERO
     };
     d.background = model.bg;
-    loop {
+    let _buf = loop {
         if window
             .as_ref()
             .is_some_and(|w| !w.is_open() || w.is_key_down(Key::Escape))
@@ -207,7 +207,7 @@ fn run(c: Cli) -> Result<()> {
         seq = model
             .frame(seq, generation, &mut d, &mut trace, animate, c.dreclim)
             .with_context(|| format!("Generation {generation}"))?;
-        if show {
+        let mut _buf: Vec<u32> = if show {
             let raster = d.raster()?;
             if let Some(enc) = &mut encoder {
                 let mut rgba = raster.data().to_vec();
@@ -218,21 +218,26 @@ fn run(c: Cli) -> Result<()> {
                 f.delay =
                     (tick(generation + 1) - tick(generation)).clamp(1., u16::MAX as f64) as u16;
                 enc.write_frame(&f)?;
+                Vec::new()
             } else if let Some(w) = &mut window {
                 // minifb expects packed RGB words rather than tiny-skia's RGBA bytes.
-                let buf: Vec<u32> = raster
+                let _buf: Vec<u32> = raster
                     .data()
                     .chunks_exact(4)
                     .map(|p| u32::from_be_bytes([0, p[0], p[1], p[2]]))
                     .collect();
-                w.update_with_buffer(&buf, width as usize, height as usize)?;
+                w.update_with_buffer(&_buf, width as usize, height as usize)?;
+                _buf
             } else if final_frame {
                 tmp.as_mut().unwrap().write_all(&raster.encode_png()?)?;
-                break;
+                break Vec::new();
+            } else {
+                // If not showing and not final frame, just discard the raster.
+                Vec::new()
             }
-        }
+        } else { Vec::new() };
         if final_frame {
-            break;
+            break _buf;
         }
         if let Some(w) = &mut window {
             // Pump window events during the wait so slow animations remain responsive.
@@ -245,7 +250,7 @@ fn run(c: Cli) -> Result<()> {
             }
         }
         generation = generation.checked_add(1).ok_or(Error::GenerationOverflow)?;
-    }
+    };
     if let Some(enc) = encoder {
         // Finish the GIF stream before making the temporary file the final output.
         enc.into_inner()?;
