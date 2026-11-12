@@ -172,8 +172,24 @@ Les chaînes entre guillemets simples ou doubles suivent les règles des chaîne
 de formule, y compris les échappements et les sauts de ligne littéraux.
 Une ligne commençant par `//` dans une chaîne est conservée. `${...}` dans
 une chaîne reste du texte littéral. Les mots ne sont pas entre guillemets :
-écrire directement les symboles Unicode ou les produire par insertion de formule.
-Seules les chaînes de formule sont décodées, sans niveau d’échappement JSON5.
+écrire les symboles Unicode directement, avec des échappements Unicode ou par
+insertion de formule.
+
+Dans les déclarations de symboles, les axiomes, les prédécesseurs (y compris
+les symboles de contexte) et les successeurs natifs, `\uXXXX` accepte exactement
+quatre chiffres hexadécimaux ; `\u{H…}` en accepte de un à six. Chaque échappement
+doit représenter une valeur scalaire Unicode : les substituts UTF-16 et les
+valeurs supérieures à U+10FFFF sont refusés. Le décodage précède la segmentation
+en graphèmes et la normalisation NFC : `e\u0301{x:5}` devient `é{x:5}`, tandis
+que `E\u0301{x:5}` devient `É{x:5}`. Par exemple, `\u{1F469}\u200D🔬` forme un
+seul symbole `👩‍🔬`. Les symboles réservés restent interdits sous forme échappée.
+
+Le décodage concerne uniquement le texte des symboles, pas le document entier.
+Les expressions d’arguments, les prédicats et les insertions `${...}` conservent
+les règles d’échappement du langage de formule. Les autres barres obliques
+inverses restent littérales dans les symboles, et celles produites par décodage
+ne sont pas décodées de nouveau. Aucun niveau d’échappement JSON5 n’est ajouté ;
+les fichiers JSON5 et les options de ligne de commande gardent leurs règles.
 
 == Exemple et correspondance JSON5
 

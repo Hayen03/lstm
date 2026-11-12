@@ -11,5 +11,5 @@
 
 - [x] Normalize symbols to Unicode NFC so canonically equivalent spellings match in declarations, rules, contexts, and trace symbol filters. Preserve case and compatibility distinctions.
 - [x] configurable recursion limit.
-- [ ] Add support for unicode escape seq in words. A word such as `E\u0301{x:5}` should be parsed as one symbol `é{x:5}` instead of 2.
+- [x] Add Unicode escapes (`\uXXXX` and `\u{...}`) to native LSTM symbols in declarations, words, and rule contexts, before grapheme segmentation and NFC normalization. For example, `e\u0301{x:5}` is one symbol `é{x:5}` (uppercase `E` produces `É`). Formula escapes retain their own rules.
 - [ ] Allow formulas in field that would ordinarily use literals in the native file format (such as `name`, `weight`, etc.)

@@ -162,9 +162,24 @@ the file prelude, before the first field.
 Single- and double-quoted strings follow the formula string rules, including
 escapes and literal newlines. A line beginning with `//` inside a string is
 preserved. `${...}` inside a string remains literal text. Words themselves are
-unquoted; write Unicode symbols directly, or generate them with a splice.
-Only formula strings are decoded, without an additional JSON5 escaping layer.
+unquoted; write Unicode symbols directly, with Unicode escapes, or generate
+them with a splice.
 
+In native symbol declarations, axioms, rule predecessors (including context
+symbols), and successors, `\uXXXX` accepts exactly four hexadecimal digits;
+`\u{H…}` accepts one to six. Each escape must encode a Unicode scalar value:
+surrogates and values above U+10FFFF are rejected. Escapes are decoded before
+grapheme segmentation and NFC normalization, so `e\u0301{x:5}` is `é{x:5}`,
+while `E\u0301{x:5}` is `É{x:5}`. For example, `\u{1F469}\u200D🔬` is one
+`👩‍🔬` symbol. Reserved symbols remain forbidden when escaped.
+
+Decoding applies only to symbol text, not to the whole document. Argument
+expressions, predicates, and `${...}` splices retain the formula language's
+own escape rules. Other backslashes in symbol text remain literal, and decoded
+backslashes are not decoded again. There is no additional JSON5 escaping layer;
+JSON5 files and command-line overrides retain their existing rules.
+
+#pagebreak(weak: true)
 == Example and JSON5 correspondence
 
 ```text
