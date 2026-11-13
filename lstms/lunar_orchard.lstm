@@ -1,0 +1,227 @@
+// LUNAR ORCHARD — native LSTM v3
+// Designed for the v3 branch of Hayen03/lstm.
+// The tree acquires its crown in generations 1-6 and blossoms in generation 7.
+// This is deliberately written in native syntax (not JSON5).
+
+version: 3;
+name: "Lunar Orchard — the Wish Tree";
+description: "A wind-shaped, luminous cherry tree over dark hills, under a crescent moon.\nGrowth is stochastic, but a fixed seed makes it repeatable.";
+meta: {
+    author: "OpenAI / ChatGPT",
+    genre: "generative botanical nightscape",
+    features: "native parser, ordered globals, Unicode symbols, weighted growth, context, predicates, splices, recursive draw, fill, absolute motion",
+};
+
+width: 1480;
+height: 940;
+bg: #081422;
+recommended_iterations: 7;
+reclim: 80;
+seed: "lunar-orchard-2026";
+
+globals: {
+    sky: #081422,
+    trunk_dark: #102A35,
+    trunk_mid: #31535A,
+    trunk_highlight: #6C8982,
+    jade: #4B8D80,
+    mint: #7BC3A4,
+    moonlight: #FBE8C3,
+    petals: fn tone -> #E5AFD5 if tone == 0 else (#F6CADF if tone == 1 else #F6E4BA),
+    leaves: fn shade -> hex(0.18 + 0.13*shade, 0.38 + 0.32*shade, 0.34 + 0.25*shade),
+};
+
+symbols: {
+    A{d: 6, l: 124, w: 27},
+    I{l: 30, w: 3},
+    S{l: 30, w: 3},
+    O{s: 8, tone: 0},
+    V{n: 3, l: 11},
+    Z{r: 3, c: mint},
+    ❀{s: 9, tone: 0},
+    ◈{turn: 0, s: 8, c: #F6CADF},
+    ✦{x: 0, y: 100, r: 1, c: #8BB2B9},
+    ✧{x: 0, y: 100, r: 2, c: #B4D3CE},
+    ❧{x: 0, y: 100, r: 2},
+    ♣{x: 0, h: 22, sway: 0},
+    E{n: 5},
+    ☾,
+    ⛰,
+    ▰,
+};
+
+// From the background to the foreground: stars, sky lights, moon,
+// distant hills, the tree, falling petals, ground and meadow grass.
+axiom:
+    ${[{"symbol": "✦", "args": {
+        "x": -710 + random()*1420,
+        "y": 125 + random()*785,
+        "r": 0.5 + random()*1.35,
+        "c": #729EA8 if random() < 0.64 else #D6C9C6
+    }} for i in range(175)]}
+    E{n: 5}
+    ☾
+    ⛰
+    [P{x: -170, y: 25} H{rot: 90} A{d: 6, l: 124, w: 27}]
+    ${[{"symbol": "❧", "args": {
+        "x": -475 + random()*820,
+        "y": 65 + random()*490,
+        "r": 1.0 + random()*2.2
+    }} for i in range(45)]}
+    ▰
+    ${[{"symbol": "♣", "args": {
+        "x": -735 + i*12.5 + (random()-0.5)*11,
+        "h": 12 + random()*27,
+        "sway": -1 + random()*2
+    }} for i in range(118)]}
+;
+
+growth: {
+    // Three daughter branches; side branches are shorter than the leader.
+    "Open fan": A{d: fn v -> v > 0}
+        weight 5
+        locals {
+            angle: 25 + random()*12,
+            sway: (random()-0.5)*13,
+            left_scale: 0.69 + random()*0.06,
+            right_scale: 0.66 + random()*0.08,
+            leader_scale: 0.81 + random()*0.045,
+            next: d - 1,
+        }
+        => S{l: l, w: w}
+           [R{deg: -angle} A{d: next, l: l*left_scale, w: max(0.85,w*0.71)}]
+           [R{deg: angle} A{d: next, l: l*right_scale, w: max(0.85,w*0.70)}]
+           R{deg: sway} A{d: next, l: l*leader_scale, w: max(0.85,w*0.78)},
+
+    // Less frequent, asymmetrical branch for a less perfectly fractal crown.
+    "Wind-swept fan": A{d: fn v -> v > 0}
+        weight 2
+        locals {
+            swing: 35 + random()*13,
+            lean: 7 + random()*12,
+            next: d - 1,
+        }
+        => S{l: l, w: w}
+           [R{deg: -swing} A{d: next, l: l*0.69, w: max(0.85,w*0.70)}]
+           R{deg: lean} A{d: next, l: l*0.82, w: max(0.85,w*0.77)}
+           [R{deg: swing} A{d: next, l: l*0.66, w: max(0.85,w*0.69)}],
+
+    // The right-context '$' picks out actual branch ends.
+    // Both eligible terminal rules have the same explicit specificity,
+    // so their weights control the mix of mauve and rose blossoms.
+    "Moon-white tips": A{d: 0} > $
+        specificity 3 weight 2
+        => O{s: 8.2 + random()*2.6, tone: 0},
+
+    "Rose-pink tips": A{d: 0} > $
+        specificity 3 weight 5
+        => O{s: 7.5 + random()*3.0, tone: 1},
+
+    "Sheltered blossoms": A{d: 0}
+        => O{s: 7 + random()*2.0, tone: 2},
+
+    // A generator that illustrates splicing during growth, not just in the axiom.
+    "Falling stars": E{n: fn v -> v > 0}
+        locals { count: 2 + n }
+        => ${[{"symbol": "✧", "args": {
+                  "x": -670 + random()*1340,
+                  "y": 160 + random()*700,
+                  "r": 1.0 + random()*2.1,
+                  "c": #A9CFCC if random() < 0.7 else #E8C8B7
+              }} for k in range(count)]}
+           E{n: n-1},
+    E{n: 0} =>,
+};
+
+draw: {
+    // Background and terrain use filled polygons and absolute coordinates.
+    "Distant rolling hills": ⛰ =>
+        [C{color: #122739}
+         (P{x:-740,y:0} D{x:-740,y:125} D{x:-595,y:165}
+          D{x:-435,y:113} D{x:-280,y:136} D{x:-80,y:62}
+          D{x:90,y:111} D{x:265,y:72} D{x:465,y:143}
+          D{x:620,y:95} D{x:740,y:132} D{x:740,y:0}
+          P{x:-740,y:0})],
+
+    "Near bank": ▰ =>
+        [C{color: #092832}
+         (P{x:-740,y:0} D{x:-740,y:38} D{x:-570,y:43}
+          D{x:-395,y:23} D{x:-210,y:34} D{x:10,y:27}
+          D{x:235,y:37} D{x:470,y:29} D{x:740,y:51}
+          D{x:740,y:0} P{x:-740,y:0})],
+
+    // A crescent is sculpted from nested circular disks; the dark cutout
+    // deliberately matches the sky near the moon rather than using alpha.
+    "Crescent and halo": ☾ =>
+        [P{x: 448, y: 717} Z{r: 111, c: #12273A}]
+        [P{x: 448, y: 717} Z{r: 99, c: #1A3344}]
+        [P{x: 448, y: 717} Z{r: 84, c: #5C6670}]
+        [P{x: 448, y: 717} Z{r: 74, c: moonlight}]
+        [P{x: 474, y: 748} Z{r: 71, c: #0E2032}],
+
+    "Small stars": ✦ =>
+        [P{x:x,y:y} Z{r:r,c:c}],
+
+    "Cross-shaped stars": ✧ =>
+        [P{x:x-3*r,y:y} D{x:x+3*r,y:y,width:0.75,color:c}]
+        [P{x:x,y:y-3*r} D{x:x,y:y+3*r,width:0.75,color:c}]
+        [P{x:x,y:y} Z{r:r*0.72,c:#F2DBD3}],
+
+    "Floating blossom fragments": ❧ =>
+        [P{x:x,y:y} H{rot:90} Z{r:r*1.5,c:#244453}]
+        [P{x:x,y:y} H{rot:90} Z{r:r*0.66,c:#CFA9C1}],
+
+    // The disk macro compensates for L's forward-offset center.
+    "Centered disk": Z =>
+        [M{length:-r} L{size:r,color:c}],
+
+    // Thin stems get recursively constructed leaflets before their line.
+    "Fine leafy stems": S{w: fn v -> v < 6.5}
+        => [M{length:l*0.52} R{deg:52} V{n:3,l:7+l*0.13}]
+           [M{length:l*0.83} R{deg:-51} V{n:3,l:7+l*0.12}]
+           I{l:l,w:w},
+
+    "Ordinary stems": S => I{l:l,w:w},
+
+    // The brush queries width() and color() are deliberately used here.
+    "Bark and moonlit edge": I =>
+        W{width:max(0.9,w)} C{color:trunk_mid}
+        [F{length:l,width:width()*1.37,color:trunk_dark}]
+        [F{length:l,width:width(),color:color()}]
+        F{length:l,width:max(0.65,width()*0.20),color:trunk_highlight},
+
+    // Drawing recursion is separate from L-system growth recursion.
+    "Leaflet ladder": V{n: fn v -> v > 0}
+        locals {radius: 1.8+l*0.13}
+        => F{length:l*0.54,width:1.1,color:jade}
+           [R{deg:55} Z{r:radius,c:leaves(0.35)}]
+           [R{deg:-55} Z{r:radius*0.91,c:leaves(0.9)}]
+           V{n:n-1,l:l*0.72},
+
+    // Unopened buds provide a visible early-generation animation.
+    "Unopened tips": A => Z{r:3.0,c:#6EAD9F},
+
+    "Open flower": O => ❀{s:s,tone:tone},
+
+    // Dynamic token splice produces five petal macros (one for each angle).
+    "Five-petalled blossom": ❀ =>
+        [Z{r:s*1.03,c:#294959}]
+        ${[{"symbol":"◈", "args": {
+            "turn": j*72,
+            "s": s,
+            "c": petals(tone)
+        }} for j in range(5)]}
+        [Z{r:s*0.25,c:#FFE7AB}]
+        [Z{r:s*0.095,c:#FFF7DA}],
+
+    "Single petal": ◈ =>
+        [R{deg:turn} M{length:s*0.18} L{size:s*0.39,color:c}],
+
+    "Meadow grass": ♣ =>
+        [P{x:x,y:0} H{rot:87+sway*17}
+         F{length:h*0.56,width:1.25,color:#2B605C}
+         [R{deg:-38} Z{r:2.1,c:#386C64}]
+         [R{deg:42} Z{r:2.3,c:#437B6B}]
+         F{length:h*0.44,width:0.8,color:#62A58B}
+         Z{r:1.5,c:#B7CB99}],
+};

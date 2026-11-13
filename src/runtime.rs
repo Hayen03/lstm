@@ -13,6 +13,8 @@ struct Live {
     width: f64,
     size: (u32, u32),
     generation: i64,
+    // Outer None means the target has not been resolved yet; inner None is endless.
+    target: Option<Option<i64>>,
     // Marks are double-buffered: reads see the completed previous generation.
     previous: Arc<[V]>,
     current: Vec<V>,
@@ -34,6 +36,9 @@ pub struct Runtime {
     live: Arc<Mutex<Live>>,
 }
 impl Runtime {
+    pub fn target(&self, n: i64) {
+        self.live.lock().unwrap().target = Some((n >= 0).then_some(n));
+    }
     pub fn enable_query_trace(&self, on: bool) {
         self.live.lock().unwrap().trace_queries = on;
     }
@@ -148,6 +153,13 @@ impl Runtime {
             "pos" => V::Array(vec![V::Float(s.pos.0), V::Float(s.pos.1)].into()),
             "heading" => V::Float(s.heading),
             "gen" => V::Int(s.generation),
+            "mxgen" => match s.target {
+                Some(Some(n)) => V::Int(n),
+                Some(None) => V::Null,
+                None => return Err(Error::InvalidArgument(
+                    "mxgen() is unavailable until recommended_iterations is resolved; use a literal target or a CLI -n override when calling it in globals".into()
+                )),
+            },
             "screen" => V::Array(vec![V::Int(s.size.0.into()), V::Int(s.size.1.into())].into()),
             "width" => V::Float(s.width),
             "color" => V::Int(s.color.into()),
@@ -158,7 +170,7 @@ impl Runtime {
     pub fn environment(&self) -> Env<'static> {
         let mut env = formulas::builtins::GLOBAL_ENV.clone();
         for name in [
-            "pos", "heading", "gen", "screen", "mark", "marked", "lctx", "rctx", "width", "color",
+            "pos", "heading", "gen", "mxgen", "screen", "mark", "marked", "lctx", "rctx", "width", "color",
         ] {
             let runtime = self.clone();
             env.insert(

@@ -1,0 +1,108 @@
+version: 3;
+name: "Lush Growing Bush of Colourful Flowers";
+description: "A large-scale parametric L-System generating a dense, vibrant bush with rich foliage and multi-colored flowers.";
+width: 1200;
+height: 1000;
+bg: #0F172A;
+recommended_iterations: 8;
+reclim: 256;
+seed: "botanical_garden_lush";
+
+globals: {
+    // Structure & Dimension parameters
+    stem_len: 34,
+    decay: 0.88,
+    
+    // Palette definitions (RGB integers)
+    c_stem: #3D2B1F,
+    c_leaf_dark: #1E5128,
+    c_leaf_light: #4E9F3D,
+    c_white: #F8FAFC,
+
+    // Flower choice helper
+    flower_palette: [#F472B6, #A855F7, #FB923C, #EF4444, #FACC15, #38BDF8]
+};
+
+// Symbol definitions and defaults (f used for custom flower to avoid primitive F collision)
+symbols: {
+    S,
+    T{len: 34, thick: 8, age: 0},
+    A{age: 0, len: 30, thick: 6},
+    B{age: 0, len: 26, thick: 5},
+    f{color: #F472B6, r: 8},
+    Z{r: 3, c: #FFFFFF}
+};
+
+axiom: S;
+
+growth: {
+    // 1. Initial trunk germination
+    germinate: S => T{len: stem_len, thick: 9, age: 0},
+
+    // 2. Main trunk progression
+    trunk_growth: T{age: fn x -> x < 5} => 
+        F{length: len, width: thick, color: c_stem} 
+        [R{deg: -15} A{age: age + 1, len: len * decay, thick: max(1.5, thick * 0.82)}]
+        [R{deg: 18} B{age: age + 1, len: len * decay, thick: max(1.5, thick * 0.82)}]
+        [R{deg: 3} L{size: 4, color: c_leaf_dark}]
+        T{len: len * 0.92, thick: max(2, thick * 0.86), age: age + 1},
+
+    // 3. Branching rule set A (Dense multi-branch variation)
+    branch_A1: A{age: fn x -> x < 6}
+    weight 3 specificity 2
+    locals {
+        next_len: len * decay,
+        next_w: max(1, thick * 0.78),
+        c_bloom: flower_palette[age % flower_palette.len()]
+    }
+    => F{length: len, width: thick, color: c_stem}
+       [R{deg: -28} A{age: age + 1, len: next_len, thick: next_w}]
+       [R{deg: -10} L{size: 4, color: c_leaf_light}]
+       [R{deg: 15} L{size: 5, color: c_leaf_dark}]
+       [R{deg: 32} B{age: age + 1, len: next_len, thick: next_w}],
+
+    // 4. Branching rule set A (Early flower shoot)
+    branch_A2: A{age: fn x -> x < 6}
+    weight 1 specificity 2
+    locals {
+        next_len: len * decay,
+        next_w: max(1, thick * 0.78),
+        c_bloom: flower_palette[(age + 3) % flower_palette.len()]
+    }
+    => F{length: len, width: thick, color: c_stem}
+       [R{deg: -20} f{color: c_bloom, r: 7}]
+       [R{deg: 10} L{size: 4, color: c_leaf_light}]
+       [R{deg: 26} B{age: age + 1, len: next_len, thick: next_w}],
+
+    // 5. Branching rule set B (Foliage heavy side branches)
+    branch_B: B{age: fn x -> x < 6}
+    locals {
+        next_len: len * decay,
+        next_w: max(1, thick * 0.78)
+    }
+    => F{length: len, width: thick, color: c_stem}
+       [R{deg: -22} L{size: 4, color: c_leaf_dark}]
+       [R{deg: -8} A{age: age + 1, len: next_len, thick: next_w}]
+       [R{deg: 14} L{size: 5, color: c_leaf_light}]
+       [R{deg: 28} B{age: age + 1, len: next_len, thick: next_w}],
+
+    // 6. Terminal buds bloom into multi-colored flowers upon reaching age limits
+    bloom_trunk: T{age: 5} => f{color: flower_palette[4], r: 10},
+    bloom_A: A{age: 6} => f{color: flower_palette[1], r: 8},
+    bloom_B: B{age: 6} => f{color: flower_palette[0], r: 8},
+};
+
+draw: {
+    // Disk centered macro for exact placement (Z uses M to counteract L's forward offset)[cite: 13]
+    Z => [C{color: c} M{length: -r} L{size: r}],
+
+    // Multi-layered flower macro rendering outer petals directly via L's native offset and a white center core
+    f => [C{color: color}
+          [R{deg: 0} L{size: r * 0.65}]
+          [R{deg: 60} L{size: r * 0.65}]
+          [R{deg: 120} L{size: r * 0.65}]
+          [R{deg: 180} L{size: r * 0.65}]
+          [R{deg: 240} L{size: r * 0.65}]
+          [R{deg: 300} L{size: r * 0.65}]
+          Z{r: r * 0.35, c: c_white}],
+};

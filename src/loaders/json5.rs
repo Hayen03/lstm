@@ -15,6 +15,6 @@ impl Json5Loader {
         freclim: Option<usize>,
     ) -> Result<Model> {
         let source: Definition = ::json5::from_str(text.trim_start_matches('\u{feff}'))?;
-        build(source, override_axiom, globals, user_seed, freclim)
+        build(source, override_axiom, globals, user_seed, freclim, None)
     }
 }

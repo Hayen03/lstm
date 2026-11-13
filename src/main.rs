@@ -73,12 +73,13 @@ fn same(a: &Path, b: &Path) -> bool {
 fn run(c: Cli) -> Result<()> {
     let src =
         fs::read_to_string(&c.file).with_context(|| format!("Reading {}", c.file.display()))?;
-    let mut model = loaders::load(
+    let mut model = loaders::load_with_iterations(
         &src,
         c.axiom.as_deref(),
         &c.globals,
         c.seed.as_deref(),
         c.freclim,
+        c.iterations,
     )
     .with_context(|| format!("Loading {}", c.file.display()))?;
 
@@ -191,7 +192,6 @@ fn run(c: Cli) -> Result<()> {
     } else {
         Duration::ZERO
     };
-    d.background = model.bg;
     let _buf = loop {
         if window
             .as_ref()

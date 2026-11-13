@@ -31,7 +31,11 @@ impl LstmLoader {
         let source = Parser::new(text)?.document()?;
         // The same evaluation order, overrides and runtime initialization apply
         // to both formats, regardless of the textual order of native fields.
-        build(source, override_axiom, globals, user_seed, freclim)
+        build(source, override_axiom, globals, user_seed, freclim, None)
+    }
+
+    pub(super) fn definition(text: &str) -> Result<Definition> {
+        Parser::new(text)?.document()
     }
 }
 
@@ -191,7 +195,7 @@ impl<'a> Parser<'a> {
         }
         Ok(bindings)
     }
-    fn metadata(&mut self) -> Result<IndexMap<String, String>> {
+    fn metadata(&mut self) -> Result<IndexMap<String, Value>> {
         self.expect("{")?;
         let mut values = IndexMap::new();
         loop {
@@ -205,7 +209,7 @@ impl<'a> Parser<'a> {
                 self.ident()?
             };
             self.expect(":")?;
-            let value = self.string()?;
+            let value = Value::String(self.expr()?.1);
             if values.insert(key.clone(), value).is_some() {
                 return Err(self.error(format!("Repeated metadata key {key}")));
             }
@@ -471,17 +475,8 @@ impl<'a> Parser<'a> {
                 match clause.as_str() {
                     "when" => rule.cond = Some(Value::String(self.expr()?.1)),
                     "locals" => rule.locals = self.bindings()?,
-                    "specificity" => rule.specificity = Some(self.integer()?),
-                    "weight" => {
-                        let (_, raw) = self.expr()?;
-                        let weight: f64 = raw
-                            .parse()
-                            .map_err(|_| self.error("Weight must be a numeric literal"))?;
-                        if !weight.is_finite() || weight < 0. {
-                            return Err(self.error("Weight must be finite and nonnegative"));
-                        }
-                        rule.weight = Some(weight);
-                    }
+                    "specificity" => rule.specificity = Some(Value::String(self.expr()?.1)),
+                    "weight" => rule.weight = Some(Value::String(self.expr()?.1)),
                     _ => {
                         return Err(diagnostic(
                             self.original,
@@ -532,23 +527,14 @@ impl<'a> Parser<'a> {
                         ));
                     }
                 }
-                "name" => source.name = self.string()?,
-                "description" => source.description = self.string()?,
+                "name" => source.name = Some(Value::String(self.expr()?.1)),
+                "description" => source.description = Some(Value::String(self.expr()?.1)),
                 "meta" => source.meta = self.metadata()?,
                 "recommended_iterations" => {
-                    let n = self.integer()?;
-                    if n < 0 {
-                        return Err(self.error("recommended_iterations must be nonnegative"));
-                    }
-                    source.recommended_iterations = Some(n);
+                    source.recommended_iterations = Some(Value::String(self.expr()?.1));
                 }
                 "seed" => {
-                    self.ws();
-                    source.seed = Some(if self.rest().starts_with(['\'', '"']) {
-                        Value::String(self.string()?)
-                    } else {
-                        Value::from(self.integer()?)
-                    });
+                    source.seed = Some(Value::String(self.expr()?.1));
                 }
                 "width" | "height" | "bg" | "reclim" => {
                     let value = Some(Value::String(self.expr()?.1));
@@ -642,10 +628,7 @@ mod tests {
             Some("override"),
             Some(100),
         )?;
-        assert_eq!(
-            (left.width, left.height, left.bg),
-            (right.width, right.height, right.bg)
-        );
+        assert_eq!((left.width, left.height), (right.width, right.height));
         assert_eq!(left.width, 240);
         for (a, b) in frames(left, 4)?.iter().zip(frames(right, 4)?) {
             assert_eq!(
@@ -723,15 +706,8 @@ mod tests {
                 "draw:{A when true when false =>};",
                 "Repeated rule clause when",
             ),
-            ("draw:{A weight -1 =>};", "finite and nonnegative"),
-            ("draw:{A weight 1+2 =>};", "numeric literal"),
-            ("draw:{A specificity 1.5 =>};", "integer literal"),
             ("axiom: ${'F';", "Expected"),
             ("axiom: A", "Unclosed word"),
-            ("name: 42;", "string literal"),
-            ("meta:{author:42};", "string literal"),
-            ("recommended_iterations:-1;", "nonnegative"),
-            ("seed: random();", "integer literal"),
         ] {
             let error = load(text)
                 .err()
@@ -761,14 +737,24 @@ mod tests {
             "width:0;",
             "height:-1;",
             "width:1.5;",
-            "bg:-1;",
-            "bg:#ffffffff;",
             "reclim:-1;",
             "width:true;",
+            "name: 42;",
+            "description: null;",
+            "meta: {author:42};",
+            "recommended_iterations:-1;",
+            "recommended_iterations:1.5;",
+            "draw:{A specificity 1.5 =>};",
+            "seed: 1.5;",
+            "seed: true;",
         ] {
             assert!(load(text).is_err(), "{text}");
         }
         assert_eq!(load("reclim:0;")?.rec_lim, 0);
+        for text in ["bg:-1;", "bg:#ffffffff;", "bg:true;"] {
+            let error = frames(load(text)?, 0).unwrap_err();
+            assert!(format!("{error:#}").contains("field bg, generation 0"));
+        }
         assert!(load("{axiom:'A'}").is_err());
         Ok(())
     }
@@ -903,5 +889,206 @@ mod tests {
                 "{escape}"
             );
         }
+    }
+
+    #[test]
+    fn startup_properties_use_globals_and_are_evaluated_once() -> Result<()> {
+        let model = load(
+            r#"
+            seed: 20+22;
+            globals: {step: let _=mark('globals') for 8};
+            recommended_iterations: let _=mark('iterations') for step//2;
+            width: let _=mark('width') for step*2;
+            height: let _=mark('height') for step;
+            reclim: let _=mark('reclim') for step+1;
+            name: let _=mark('name') for 'Model '+str(mxgen());
+            description: let _=mark('description') for str(step);
+            meta: {author: let _=mark('meta') for 'author '+str(step)};
+            axiom: A{calls:marked()};
+            growth: {named: A specificity (let _=mark('specificity') for step) => A{calls:marked()}};
+        "#,
+        )?;
+        assert_eq!(
+            (model.width, model.height, model.rec_lim, model.iterations),
+            (16, 8, 9, 4)
+        );
+        assert_eq!(model.name, "Model 4");
+        assert_eq!(model.description, "8");
+        assert_eq!(model.meta["author"], "author 8");
+        let all = frames(model, 1)?;
+        let expected = [
+            "globals",
+            "iterations",
+            "width",
+            "height",
+            "reclim",
+            "name",
+            "description",
+            "meta",
+            "specificity",
+        ]
+        .map(|s| V::String(s.into()))
+        .to_vec();
+        assert_eq!(all[0][0].args["calls"], V::Array(expected.into()));
+        assert_eq!(all[1][0].args["calls"], V::Array(vec![].into()));
+        assert!(load(r#"growth: {"name"+"suffix": A => B};"#).is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn seed_formulas_run_before_globals_and_cli_seed_bypasses_them() -> Result<()> {
+        for (expression, literal) in [("6*7", "42"), ("'spr'+'ing'", "'spring'")] {
+            let source = "globals: {sample:random()}; axiom: A{x:sample};";
+            let a = frames(load(&format!("seed:{expression}; {source}"))?, 0)?;
+            let b = frames(load(&format!("seed:{literal}; {source}"))?, 0)?;
+            assert_eq!(a[0][0].value(), b[0][0].value());
+        }
+        let error = load("seed:base; globals:{base:42};").err().unwrap();
+        assert!(format!("{error:#}").contains("field seed"));
+        for seed in ["gen()", "mxgen()", "screen()"] {
+            assert!(load(&format!("seed:{seed};")).is_err());
+        }
+        let a = LstmLoader::load(
+            "seed:error('unused'); globals:{x:random()}; axiom:A{x:x};",
+            None,
+            "",
+            Some("42"),
+            None,
+        )?;
+        let b = load("seed:42; globals:{x:random()}; axiom:A{x:x};")?;
+        assert_eq!(frames(a, 0)?[0][0].value(), frames(b, 0)?[0][0].value());
+        Ok(())
+    }
+
+    #[test]
+    fn mxgen_uses_recommendations_overrides_and_endless_mode() -> Result<()> {
+        let text = "recommended_iterations:3; globals:{target:mxgen()}; name:str(mxgen()); axiom:A{target:target};";
+        for (override_n, expected) in [(None, V::Int(3)), (Some(7), V::Int(7)), (Some(-1), V::Null)]
+        {
+            let model =
+                crate::loaders::load_with_iterations(text, None, "", None, None, override_n)?;
+            let all = frames(model, 0)?;
+            assert_eq!(all[0][0].args["target"], expected);
+        }
+        let model =
+            load("globals:{step:3}; recommended_iterations:step*2; axiom:A{target:mxgen()};")?;
+        assert_eq!(frames(model, 0)?[0][0].args["target"], V::Int(6));
+        let source = "globals:{target:mxgen()}; recommended_iterations:target+1;";
+        let error = load(source).err().unwrap();
+        assert!(format!("{error:#}").contains("unavailable until recommended_iterations"));
+        assert!(
+            crate::loaders::load_with_iterations(source, None, "", None, None, Some(4)).is_ok()
+        );
+        let model = load("axiom:A{target:mxgen()};")?;
+        assert_eq!(frames(model, 0)?[0][0].args["target"], V::Int(5));
+        let model = crate::loaders::json5::Json5Loader::load(
+            r#"{recommended_iterations:-1,globals:{target:"mxgen()"},axiom:"A{target:target}"}"#,
+            None,
+            "",
+            None,
+            None,
+        )?;
+        assert_eq!(frames(model, 0)?[0][0].args["target"], V::Null);
+        Ok(())
+    }
+
+    #[test]
+    fn dynamic_weights_run_once_per_match_before_selection_without_locals() -> Result<()> {
+        let model = load(
+            r#"
+            globals:{factor:2}; axiom:A{x:0}A{x:1};
+            growth:{
+                A{x:99} weight error('constraint failed') => X,
+                A when false weight error('guard failed') => X,
+                A specificity 100 weight 0 => X,
+                A weight (let _=mark('first') for x*factor*gen()) => B,
+                A weight (let _=mark('second') for (1-x)*factor) => C,
+                B => B{calls:marked()}, C => C{calls:marked()},
+            };
+        "#,
+        )?;
+        let all = frames(model, 2)?;
+        assert_eq!(word(&all[1]), "CB");
+        let expected = ["first", "second", "first", "second"]
+            .map(|s| V::String(s.into()))
+            .to_vec();
+        assert_eq!(all[2][0].args["calls"], V::Array(expected.into()));
+        let model = load("axiom:A; growth:{A weight local locals {local:1} => B};")?;
+        let error = frames(model, 1).unwrap_err();
+        assert!(format!("{error:#}").contains("weight local"));
+        Ok(())
+    }
+
+    #[test]
+    fn drawing_weights_and_background_observe_live_state_each_frame() -> Result<()> {
+        let mut model = load(
+            r#"
+            width:16; height:8; globals:{base:256};
+            axiom:A{x:2}A{x:5};
+            draw:{
+                A weight (let _=mark('weight') for 1 if pos()[0]<x else 0) => P{x:x,y:0}H{rot:30},
+                A weight 0 => P{x:99,y:99},
+            };
+            bg: let _=mark('bg') for base+int(pos()[0])+int(heading())+screen()[0]+gen();
+        "#,
+        )?;
+        let mut d = Dessin::new(24, 12);
+        let mut trace = Trace::new(Default::default())?;
+        let mut seq = Arc::from([]);
+        for generation in 0..=2 {
+            d.capture = generation == 2;
+            seq = model.frame(seq, generation, &mut d, &mut trace, false, None)?;
+            assert_eq!(d.background, 256 + 5 + 30 + 24 + generation as u32);
+            assert_eq!(d.pose().p, (5., 0.));
+            assert_eq!(
+                model.engine.evaluate("marked()", &formulas::Env::new())?,
+                if generation == 0 {
+                    V::Array(vec![].into())
+                } else {
+                    V::Array(
+                        vec![
+                            V::String("weight".into()),
+                            V::String("weight".into()),
+                            V::String("bg".into()),
+                        ]
+                        .into(),
+                    )
+                }
+            );
+        }
+        Ok(())
+    }
+
+    #[test]
+    fn invalid_dynamic_weights_and_backgrounds_have_runtime_context() -> Result<()> {
+        for expr in ["-1", "true", "'bad'", "[1]", "float('inf')"] {
+            for (phase, source, generation) in [
+                (
+                    "growth",
+                    format!("axiom:A; growth:{{named:A weight {expr} => B}};"),
+                    1,
+                ),
+                (
+                    "drawing",
+                    format!("axiom:A; draw:{{named:A weight {expr} => B}};"),
+                    0,
+                ),
+            ] {
+                let error = frames(load(&source)?, generation).unwrap_err();
+                let message = format!("{error:#}");
+                assert!(
+                    message.contains(&format!("{phase} rule named")),
+                    "{message}"
+                );
+                assert!(message.contains("weight"), "{message}");
+            }
+        }
+        let model = load("bg: 0 if gen()==0 else -1;")?;
+        let error = frames(model, 1).unwrap_err();
+        assert!(format!("{error:#}").contains("field bg, generation 1"));
+        let model =
+            load("axiom:A; growth:{A weight float('1e308')=>B, A weight float('1e308')=>C};")?;
+        assert!(frames(model, 1).is_err());
+        Ok(())
     }
 }

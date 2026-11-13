@@ -28,7 +28,7 @@ pub(crate) struct Rule {
     pub(crate) right: Option<Pattern>,
     pub(crate) cond: Option<formulas::Expr>,
     pub(crate) out: Vec<DeferredToken>,
-    pub(crate) weight: f64,
+    pub(crate) weight: formulas::Expr,
     pub(crate) specificity: i64,
     pub(crate) name: String,
 }
@@ -38,7 +38,9 @@ pub struct Model {
     pub description: String,
     pub meta: indexmap::IndexMap<String, String>,
     pub iterations: i64,
+    /// Last evaluated background color; native formulas first run in `frame`.
     pub bg: u32,
+    pub(crate) background: Option<formulas::Expr>,
     pub width: u32,
     pub height: u32,
     pub(crate) axiom: Arc<[DeferredToken]>,
@@ -99,6 +101,32 @@ impl Model {
             })?;
             at += 1;
         }
+        // Background formulas see the final pose, even on uncaptured frames.
+        // No rule's local bindings or token provider leaks into this evaluation.
+        if let Some(expr) = &self.background {
+            self.runtime.sync(d);
+            tr.rule = None;
+            tr.symbol = "".into();
+            tr.index = 0;
+            self.bg = self.runtime
+                .with_context(None, || -> Result<u32> {
+                    let value = self.engine.evalexpr(expr, &Env::new())?;
+                    trace_queries(&self.runtime, tr, "background")?;
+                    match value {
+                        V::Int(n) if (0..=0xffffff).contains(&n) => Ok(n as u32),
+                        got => Err(Error::InvalidArgument {
+                            field: "bg".into(),
+                            expected: "RGB integer in 0..=0xFFFFFF".into(),
+                            got,
+                        }),
+                    }
+                })
+                .with_context(|| format!("field bg, generation {n}"))?;
+            tr.event("background", "background_evaluated", || {
+                json!({"value":self.bg})
+            })?;
+        }
+        d.background = self.bg;
         let result = std::mem::take(&mut word.lock().unwrap().tokens);
         Ok(result.into())
     }
@@ -259,6 +287,25 @@ fn actualize(
         args: values,
     })
 }
+pub(crate) fn rule_weight(value: V) -> Result<f64> {
+    let weight = match value {
+        V::Int(n) => n as f64,
+        V::Float(n) => n,
+        got => {
+            return Err(Error::InvalidArgument {
+                field: "weight".into(),
+                expected: "finite nonnegative number".into(),
+                got,
+            });
+        }
+    };
+    ensure!(
+        weight.is_finite() && weight >= 0.,
+        Error::InvalidRuleWeight { weight }
+    );
+    Ok(weight)
+}
+
 fn select(
     runtime: &Runtime,
     rules: &[Rule],
@@ -316,21 +363,32 @@ fn select(
                 rule.name, tr.generation, tr.index
             )
         })?;
+        let weight = if matches {
+            let value = engine
+                .evalexpr(&rule.weight, &env)
+                .map_err(Error::from)
+                .and_then(rule_weight)
+                .with_context(|| format!("{}, weight {}", tr.location(phase), rule.weight))?;
+            trace_queries(runtime, tr, phase)?;
+            Some(value)
+        } else {
+            None
+        };
         tr.event(
             phase,
             "rule_checked",
-            || json!({"matched":matches,"specificity":rule.specificity,"weight":rule.weight}),
+            || json!({"matched":matches,"specificity":rule.specificity,"weight":weight}),
         )?;
-        if matches && rule.weight > 0. {
-            candidates.push(index)
+        if let Some(weight) = weight.filter(|w| *w > 0.) {
+            candidates.push((index, weight))
         }
     }
-    let Some(best) = candidates.iter().map(|&i| rules[i].specificity).max() else {
+    let Some(best) = candidates.iter().map(|&(i, _)| rules[i].specificity).max() else {
         tr.rule = None;
         return Ok(None);
     };
-    candidates.retain(|&i| rules[i].specificity == best);
-    let total = candidates.iter().map(|&i| rules[i].weight).sum::<f64>();
+    candidates.retain(|&(i, _)| rules[i].specificity == best);
+    let total = candidates.iter().map(|&(_, weight)| weight).sum::<f64>();
     if !total.is_finite() {
         return Err(Error::InvalidTotalWeight { total });
     }
@@ -340,11 +398,11 @@ fn select(
         engine.random_percent() / 100. * total
     };
     let mut sum = 0.;
-    let i = candidates
+    let (i, _) = candidates
         .iter()
         .copied()
-        .find(|&i| {
-            sum += rules[i].weight;
+        .find(|&(_, weight)| {
+            sum += weight;
             sum > value
         })
         .unwrap_or(*candidates.last().unwrap());

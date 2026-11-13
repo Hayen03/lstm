@@ -104,13 +104,13 @@ Les virgules finales sont autorisées et encouragées.
   columns: (auto, 1fr, auto),
   table.header([Champ], [Valeur native], [Défaut]),
   [`version`], [Version entière du format ; seule `3` est acceptée.], [`3`],
-  [`name`, `description`], [Chaînes littérales.], [`""`],
-  [`meta`], [Bloc de clés, identificateurs ou chaînes, associées à des chaînes littérales ; clés distinctes.], [`{}`],
+  [`name`, `description`], [Formules produisant des chaînes, évaluées une fois.], [`""`],
+  [`meta`], [Bloc de clés distinctes, identificateurs ou chaînes, associées à des formules produisant des chaînes, évaluées une fois.], [`{}`],
   [`width`, `height`], [Formules produisant des dimensions entières strictement positives.], [`1000`, `800`],
-  [`bg`], [Formule produisant un entier RGB entre `0x000000` et `0xFFFFFF`.], [`#FFFFFF`],
-  [`recommended_iterations`], [Entier littéral positif ou nul.], [`5`],
+  [`bg`], [Formule produisant un entier RGB entre `0x000000` et `0xFFFFFF`, évaluée après le dessin de chaque génération.], [`#FFFFFF`],
+  [`recommended_iterations`], [Formule produisant un entier positif ou nul, évaluée une fois.], [`5`],
   [`reclim`], [Formule produisant une limite de récursion de dessin entière positive ou nulle.], [`128`],
-  [`seed`], [Entier ou chaîne littérale.], [absent],
+  [`seed`], [Formule produisant un entier ou une chaîne, évaluée une fois avant les variables globales.], [absent],
   [`globals`], [Liaisons ordonnées `nom: formule`.], [`{}`],
   [`axiom`], [Mot pouvant contenir des insertions de formules.], [mot vide],
   [`symbols`], [Tokens avec arguments par défaut facultatifs.], [`{}`],
@@ -123,26 +123,48 @@ Les formules et les mots ne sont pas entourés de guillemets JSON5.
 Une déclaration contient uniquement un symbole et ses arguments par défaut,
 comme dans `symbols: {A{n: 3}, B};`.
 
-Tous les champs sont recueillis avant l’évaluation des variables globales,
-une seule fois dans l’ordre de déclaration. Ainsi, `width: 20*step;` peut
-précéder `globals: {unit: 6, step: 3*unit};`. Les dimensions, le fond et la
-limite de récursion du dessin sont évalués après les variables globales.
+Tous les champs sont recueillis avant évaluation. La formule de graine est
+évaluée d’abord, avec les fonctions usuelles du langage de formule, sans
+variables globales ni fonctions d’état LSTM. Une graine fournie en ligne de
+commande remplace cette formule sans l’évaluer. Le résultat initialise le
+générateur aléatoire avant l’évaluation des variables globales, une fois dans
+l’ordre de déclaration, avec les remplacements de la ligne de commande.
+
+Les propriétés initiales sont ensuite évaluées une fois avec les variables
+globales, dans cet ordre : `recommended_iterations`, `width`, `height`, `reclim`,
+`name`, `description`, valeurs des métadonnées dans l’ordre de déclaration, puis
+spécificités des règles (croissance avant dessin, dans l’ordre des règles).
+Ainsi, `width: 20*step;` peut précéder `globals: {unit: 6, step: 3*unit};`.
+Les propriétés ne deviennent pas des variables globales.
+
+`bg` est évalué une fois par génération, après le dessin et avant la
+rastérisation, même si cette génération n’est ni affichée ni sauvegardée.
+Il voit les variables globales, `gen()`, `mxgen()` et l’état final de la tortue
+et du canevas par `pos()`, `heading()`, `screen()`, `width()` et `color()`.
+`screen()` tient compte des dimensions imposées en ligne de commande.
+Le résultat doit être un entier RGB ; aucune évaluation n’a lieu au chargement.
 
 == Règles et limites des formules
 
 ```text
 regle       ::= [ nom ":" ] predecesseur { clause } "=>" mot ;
 predecesseur ::= [ motifGauche "<" ] motifToken [ ">" motifDroit ] ;
-clause      ::= "when" expression | "weight" nombre
-              | "specificity" entier | "locals" liaisons ;
+clause      ::= "when" expression | "weight" expression
+              | "specificity" expression | "locals" liaisons ;
 liaisons    ::= "{" [ argument { "," argument } [ "," ] ] "}" ;
 ```
 
-Le nom d’une règle est un identificateur ou une chaîne entre guillemets.
+Le nom d’une règle reste un identificateur ou une chaîne statique, pas une formule.
 Chaque clause peut apparaître une seule fois, dans un ordre quelconque.
 `when` doit retourner un booléen et ne voit pas les `locals`.
-`weight` est un nombre littéral fini, positif ou nul, valant `1` par défaut.
-`specificity` est un entier littéral ; par défaut, elle compte les contraintes
+`weight` est une formule produisant un nombre fini, positif ou nul, valant `1`
+par défaut. Elle est évaluée une fois lorsque les motifs et la condition
+correspondent, avant le filtrage par spécificité et le tirage aléatoire. Elle
+voit les variables globales, les arguments du token et les fonctions d’état,
+mais pas les variables locales de la règle. Un poids nul retire la candidate ;
+un résultat négatif, non numérique ou non fini est une erreur.
+`specificity` est une formule entière évaluée une fois au démarrage avec les
+variables globales ; par défaut, elle compte les contraintes
 d’arguments du token central, plus une par côté de contexte précisé.
 Seuls les `locals` de la règle choisie sont évalués, dans l’ordre de déclaration,
 avant son successeur.
@@ -598,8 +620,9 @@ pas une priorité de type « première règle correspondante ».
 Si les règles retenues ont des poids $w_1, dots, w_k$ et une somme $W > 0$,
 la probabilité nominale de choisir la règle $i$ est $w_i / W$. Les poids
 n’ont pas besoin de totaliser un. Des poids `3` et `1` représentent ainsi
-les proportions trois quarts et un quart. Dans les deux formats, les poids sont des nombres littéraux
-fixes, et non des chaînes de formules.
+les proportions trois quarts et un quart. Les poids JSON5 restent des nombres
+littéraux fixes ; les poids natifs sont évalués pour chaque candidate qui
+correspond, comme décrit plus haut.
 
 Sans règle sélectionnée, la croissance conserve le token et le dessin le traite comme terminal.
 
@@ -763,6 +786,7 @@ Les fonctions suivantes donnent accès à l’état du modèle, à son contexte 
 / `mark(val)` : Enregistre la valeur dans une liste qui sera disponible pour consultation dans la prochaine itération. Retourne `null`.
 / `marked()` : Retourne la liste des valeurs enregistrées par `mark` lors de l'itération précédente.
 / `gen()`: Retourne le numéro de la génération actuelle du modèle ; l’axiome correspond à la génération 0.
+/ `mxgen()`: Retourne la génération cible après application de `-n`, ou `null` pour une animation sans fin. Sans remplacement, utilise `recommended_iterations`, valant 5 par défaut. Les règles de dépendance au démarrage décrites plus haut s’appliquent aux appels dans les variables globales.
 / `screen()`: Retourne les dimensions du canevas sous la forme `[largeur, hauteur]`, deux entiers en pixels.
 / `width()`: Retourne la taille actuelle du pinceau en pixels.
 / `color()`: Retourne la couleur actuelle du pinceau sous forme d'entier.
@@ -772,6 +796,14 @@ Les fonctions suivantes donnent accès à l’état du modèle, à son contexte 
 Ces fonctions décrivent l’état du dessin pendant l’évaluation d’une génération,
 indépendamment de l’affichage ou de l’enregistrement de l’image. `marked()`
 ne contient pas les marques en cours de collecte pour la génération actuelle.
+
+`mxgen()` retourne la génération cible effective, compte tenu de l’option `-n`,
+ou `null` pour une animation sans fin. Une recommandation littérale (défaut `5`)
+ou l’option `-n` est accessible dès l’évaluation des variables globales.
+Une recommandation calculée doit d’abord être évaluée après celles-ci : appeler
+`mxgen()` avant cette résolution est une erreur, sauf si `-n` fournit déjà la
+cible. Cela évite une dépendance circulaire entre les variables globales et la
+recommandation calculée.
 
 `pos()` et `heading()` décrivent l’état courant de la tortue, y compris dans
 un motif de contexte : ils ne restituent pas l’état au moment du dessin d’un

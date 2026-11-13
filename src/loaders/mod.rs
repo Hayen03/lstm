@@ -18,18 +18,32 @@ pub fn load(
     user_seed: Option<&str>,
     freclim: Option<usize>,
 ) -> Result<Model> {
+    load_with_iterations(text, override_axiom, globals, user_seed, freclim, None)
+}
+
+/// Resolve the effective target before evaluating globals and startup properties.
+pub fn load_with_iterations(
+    text: &str,
+    override_axiom: Option<&str>,
+    globals: &str,
+    user_seed: Option<&str>,
+    freclim: Option<usize>,
+    iterations: Option<i64>,
+) -> Result<Model> {
     let start = content_start(text)?;
-    if text[start..].starts_with('{') {
-        json5::Json5Loader::load(
-            text.trim_start_matches('\u{feff}'),
-            override_axiom,
-            globals,
-            user_seed,
-            freclim,
-        )
+    let source = if text[start..].starts_with('{') {
+        ::json5::from_str(text.trim_start_matches('\u{feff}'))?
     } else {
-        lstm::LstmLoader::load(text, override_axiom, globals, user_seed, freclim)
-    }
+        lstm::LstmLoader::definition(text)?
+    };
+    common::build(
+        source,
+        override_axiom,
+        globals,
+        user_seed,
+        freclim,
+        iterations,
+    )
 }
 
 pub(super) fn diagnostic(text: &str, offset: usize, message: impl Into<String>) -> Error {

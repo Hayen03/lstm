@@ -9,7 +9,7 @@ use crate::{
     runtime::Runtime,
     syntax::*,
 };
-use formulas::{Env, FormulaEngine};
+use formulas::{Env, EvalValue as V, Expr, FormulaEngine};
 use indexmap::IndexMap;
 use serde::Deserialize;
 use serde_json::Value;
@@ -18,9 +18,9 @@ use std::{collections::HashMap, sync::Arc};
 #[derive(Deserialize, Default)]
 #[serde(default)]
 pub(super) struct Definition {
-    pub name: String,
-    pub description: String,
-    pub meta: IndexMap<String, String>,
+    pub name: Option<Value>,
+    pub description: Option<Value>,
+    pub meta: IndexMap<String, Value>,
     #[serde(skip)]
     pub native: bool,
     pub axiom: String,
@@ -29,7 +29,7 @@ pub(super) struct Definition {
     pub width: Option<Value>,
     pub height: Option<Value>,
     pub seed: Option<Value>,
-    pub recommended_iterations: Option<i64>,
+    pub recommended_iterations: Option<Value>,
     pub symbols: Vec<String>,
     pub drawing: Vec<RuleDefinition>,
     pub rules: Vec<RuleDefinition>,
@@ -44,8 +44,8 @@ pub(super) struct RuleDefinition {
     #[serde(default)]
     pub to: String,
     pub name: Option<String>,
-    pub weight: Option<f64>,
-    pub specificity: Option<i64>,
+    pub weight: Option<Value>,
+    pub specificity: Option<Value>,
     pub cond: Option<Value>,
 }
 // JSON strings contain formula source; scalar JSON values become literal formulas.
@@ -68,19 +68,114 @@ fn seed(s: &str) -> u64 {
     })
 }
 
+fn evaluate(value: Value, engine: &mut FormulaEngine, field: &str) -> Result<V> {
+    engine
+        .evaluate(&formula(value), &Env::new())
+        .map_err(Error::from)
+        .with_context(|| format!("field {field}"))
+}
+
+fn text_setting(
+    value: Option<Value>,
+    native: bool,
+    engine: &mut FormulaEngine,
+    field: &str,
+) -> Result<String> {
+    let Some(value) = value else {
+        return Ok(String::new());
+    };
+    let value = if native {
+        evaluate(value, engine, field)?
+    } else if let Value::String(text) = value {
+        return Ok(text);
+    } else {
+        evaluate(value, engine, field)?
+    };
+    match value {
+        V::String(text) => Ok(text.to_string()),
+        got => Err(Error::InvalidArgument {
+            field: field.into(),
+            expected: "string".into(),
+            got,
+        }),
+    }
+}
+
+fn integer_setting(
+    value: Value,
+    native: bool,
+    engine: &mut FormulaEngine,
+    field: &str,
+) -> Result<i64> {
+    if !native {
+        return value.as_i64().ok_or_else(|| Error::InvalidArgument {
+            field: field.into(),
+            expected: "integer literal".into(),
+            got: V::String(value.to_string().into()),
+        });
+    }
+    match evaluate(value, engine, field)? {
+        V::Int(n) => Ok(n),
+        got => Err(Error::InvalidArgument {
+            field: field.into(),
+            expected: "integer".into(),
+            got,
+        }),
+    }
+}
+
 pub(super) fn build(
     s: Definition,
     override_axiom: Option<&str>,
     globals: &str,
     user_seed: Option<&str>,
     freclim: Option<usize>,
+    target: Option<i64>,
 ) -> Result<Model> {
-    let seed_arg = s.seed.map(formula);
+    // A CLI seed bypasses the model seed. Native seed formulas run before any
+    // globals, using only ordinary formula builtins and their own temporary RNG.
+    let seed_arg = if let Some(value) = user_seed {
+        Some(seed(value))
+    } else if let Some(value) = s.seed {
+        if s.native {
+            let mut bootstrap = FormulaEngine::new(None);
+            if let Some(limit) = freclim {
+                bootstrap = bootstrap.with_max_rec(limit);
+            }
+            let value = evaluate(value, &mut bootstrap, "seed")?;
+            Some(match value {
+                V::Int(n) => seed(&n.to_string()),
+                V::String(text) => seed(&text),
+                got => {
+                    return Err(Error::InvalidArgument {
+                        field: "seed".into(),
+                        expected: "integer or string".into(),
+                        got,
+                    });
+                }
+            })
+        } else {
+            Some(seed(&formula(value)))
+        }
+    } else {
+        None
+    };
 
     let runtime = Runtime::default();
+    let iterations_expr = s.recommended_iterations.unwrap_or(Value::from(5));
+    // Literal targets (the usual case) and CLI overrides are already available
+    // to globals. A computed recommendation is resolved after globals instead.
+    if let Some(n) = target {
+        runtime.target(n);
+    } else if let Some(n) = iterations_expr.as_i64() {
+        runtime.target(n);
+    } else if let Expr::Literal(V::Int(n)) =
+        expression(&formula(iterations_expr.clone())).context("Parsing recommended_iterations")?
+    {
+        runtime.target(n);
+    }
     let mut env = runtime.environment();
-    let mut engine =
-        FormulaEngine::new(user_seed.or(seed_arg.as_deref()).map(seed)).with_globals(env.clone());
+    let mut engine = FormulaEngine::new(seed_arg).with_globals(env.clone());
     if let Some(freclim) = freclim {
         engine = engine.with_max_rec(freclim);
     }
@@ -107,11 +202,26 @@ pub(super) fn build(
         env.insert(name, value);
         engine = engine.with_globals(env.clone());
     }
+    let iterations = integer_setting(
+        iterations_expr,
+        s.native,
+        &mut engine,
+        "recommended_iterations",
+    )?;
+    ensure!(
+        !s.native || iterations >= 0,
+        Error::InvalidArgument {
+            field: "recommended_iterations".into(),
+            expected: "nonnegative integer".into(),
+            got: V::Int(iterations),
+        }
+    );
+    runtime.target(target.unwrap_or(iterations));
     let mut setting = |field: &'static str, value: Option<Value>, default| -> Result<u32> {
         let Some(value) = value else {
             return Ok(default);
         };
-        let evaluated = engine.evaluate(&formula(value), &Env::new())?;
+        let evaluated = evaluate(value, &mut engine, field)?;
         if s.native {
             let valid = match &evaluated {
                 formulas::EvalValue::Int(n) => match field {
@@ -142,10 +252,29 @@ pub(super) fn build(
             source,
         })
     };
-    let bg = setting("bg", s.bg, 0xffffff)?;
+    let (bg, background) = if s.native {
+        (
+            0xffffff,
+            s.bg.map(|v| expression(&formula(v)))
+                .transpose()
+                .context("Parsing field bg")?,
+        )
+    } else {
+        (setting("bg", s.bg, 0xffffff)?, None)
+    };
     let width = setting("width", s.width, 1000)?;
     let height = setting("height", s.height, 800)?;
     let rec_lim = setting("reclim", s.reclim, 128)? as usize;
+    let name = text_setting(s.name, s.native, &mut engine, "name")?;
+    let description = text_setting(s.description, s.native, &mut engine, "description")?;
+    let meta = s
+        .meta
+        .into_iter()
+        .map(|(key, value)| {
+            let text = text_setting(Some(value), s.native, &mut engine, &format!("meta.{key}"))?;
+            Ok((key, text))
+        })
+        .collect::<Result<_>>()?;
     let mut symbols = HashMap::new();
     for declaration in s.symbols {
         let core = single(&declaration)
@@ -163,15 +292,16 @@ pub(super) fn build(
     }
     let axiom = word(override_axiom.unwrap_or(&s.axiom)).context("Parsing axiom")?;
     Ok(Model {
-        name: s.name,
-        description: s.description,
-        meta: s.meta,
-        iterations: s.recommended_iterations.unwrap_or(5),
+        name,
+        description,
+        meta,
+        iterations,
         bg,
+        background,
         axiom: axiom.into(),
         symbols: Arc::new(symbols),
-        rules: parse_rules(s.rules, "growth")?.into(),
-        drawing: parse_rules(s.drawing, "drawing")?,
+        rules: parse_rules(s.rules, "growth", s.native, &mut engine)?.into(),
+        drawing: parse_rules(s.drawing, "drawing", s.native, &mut engine)?,
         width,
         height,
         rec_lim,
@@ -181,7 +311,12 @@ pub(super) fn build(
 }
 
 /// Attach field and rule identities at load time, before any generation runs.
-fn parse_rules(source: Vec<RuleDefinition>, phase: &str) -> Result<Vec<Rule>> {
+fn parse_rules(
+    source: Vec<RuleDefinition>,
+    phase: &str,
+    native: bool,
+    engine: &mut FormulaEngine,
+) -> Result<Vec<Rule>> {
     source
         .into_iter()
         .enumerate()
@@ -191,14 +326,25 @@ fn parse_rules(source: Vec<RuleDefinition>, phase: &str) -> Result<Vec<Rule>> {
                 let (l, core, h) = predecessor(&r.from).context("field from")?;
                 let left = l.map(Pattern::parse).transpose().context("left context")?;
                 let right = h.map(Pattern::parse).transpose().context("right context")?;
-                let specificity = r.specificity.unwrap_or(
-                    core.args.len() as i64 + left.is_some() as i64 + right.is_some() as i64,
-                );
-                let weight = r.weight.unwrap_or(1.);
-                ensure!(
-                    weight >= 0. && weight.is_finite(),
-                    Error::InvalidRuleWeight { weight }
-                );
+                let specificity = match r.specificity {
+                    Some(value) => integer_setting(value, native, engine, "specificity")?,
+                    None => core.args.len() as i64 + left.is_some() as i64 + right.is_some() as i64,
+                };
+                let weight_value = r.weight.unwrap_or(Value::from(1));
+                // Legacy JSON5 weights are still static numeric literals.
+                let weight = if native {
+                    expression(&formula(weight_value)).context("field weight")?
+                } else {
+                    let number = weight_value
+                        .as_f64()
+                        .ok_or_else(|| Error::InvalidArgument {
+                            field: "weight".into(),
+                            expected: "numeric literal".into(),
+                            got: V::String(weight_value.to_string().into()),
+                        })?;
+                    crate::model::rule_weight(V::Float(number))?;
+                    Expr::Literal(V::Float(number))
+                };
                 let mut locals = Args::new();
                 for (key, value) in r.locals {
                     let expr =

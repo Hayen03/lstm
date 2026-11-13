@@ -101,13 +101,13 @@ Trailing commas are allowed, and encouraged.
   columns: (auto, 1fr, auto),
   table.header([Field], [Native value], [Default]),
   [`version`], [Integer format version; only `3` is supported.], [`3`],
-  [`name`, `description`], [String literals.], [`""`],
-  [`meta`], [Block of identifier or quoted keys mapped to string literals; keys must be distinct.], [`{}`],
+  [`name`, `description`], [Formulas yielding strings, evaluated once.], [`""`],
+  [`meta`], [Block of distinct identifier or quoted keys mapped to formulas yielding strings, evaluated once.], [`{}`],
   [`width`, `height`], [Formulas yielding strictly positive integer dimensions.], [`1000`, `800`],
-  [`bg`], [Formula yielding an RGB integer in `0x000000`–`0xFFFFFF`.], [`#FFFFFF`],
-  [`recommended_iterations`], [Nonnegative integer literal.], [`5`],
+  [`bg`], [Formula yielding an RGB integer in `0x000000`–`0xFFFFFF`, evaluated after drawing each generation.], [`#FFFFFF`],
+  [`recommended_iterations`], [Formula yielding a nonnegative integer, evaluated once.], [`5`],
   [`reclim`], [Formula yielding a nonnegative drawing recursion limit.], [`128`],
-  [`seed`], [Integer or string literal.], [absent],
+  [`seed`], [Formula yielding an integer or string, evaluated once before globals.], [absent],
   [`globals`], [Ordered `name: formula` bindings.], [`{}`],
   [`axiom`], [Word, optionally containing splices.], [empty word],
   [`symbols`], [Tokens with optional default arguments.], [`{}`],
@@ -119,24 +119,42 @@ tokens, whereas `globals: {label: "ABC"};` defines one string. Formulas and word
 have no surrounding JSON5 quotes. Symbol declarations contain only a symbol
 and its default arguments, as in `symbols: {A{n: 3}, B};`.
 
-All fields are collected before evaluating globals, once in declaration order.
-Thus `width: 20*step;` can precede `globals: {unit: 6, step: 3*unit};`.
-Dimensions, background, and drawing recursion limit are evaluated after globals.
+All fields are collected before evaluation. 
+The seed formula runs first, with standard formula builtins but without globals or LSTM state functions. 
+An override seed bypasses that formula. 
+The resulting seed initializes the model's random generator before globals are evaluated, once in declaration order, including global overrides.
+
+Startup properties then run once, with globals, in this order:
+`recommended_iterations`, `width`, `height`, `reclim`, `name`, `description`,
+metadata values in declaration order, then rule specificities (growth before
+drawing, in rule order). Thus `width: 20*step;` can precede
+`globals: {unit: 6, step: 3*unit};`.
+
+`bg` runs once per generation, after drawing and before rasterization, including
+generations that are not displayed or saved. It sees globals, the current
+`gen()` and `mxgen()`, and the final turtle and canvas state via `pos()`,
+`heading()`, `screen()`, `width()`, and `color()`. Canvas overrides are reflected
+in `screen()`. Its result must be an RGB integer;
 
 == Rules and formula boundaries
 
 ```text
 rule        ::= [ name ":" ] predecessor { clause } "=>" word ;
 predecessor ::= [ leftPattern "<" ] tokenPattern [ ">" rightPattern ] ;
-clause      ::= "when" expression | "weight" number
-              | "specificity" integer | "locals" bindings ;
+clause      ::= "when" expression | "weight" expression
+              | "specificity" expression | "locals" bindings ;
 bindings    ::= "{" [ argument { "," argument } [ "," ] ] "}" ;
 ```
 
-A rule name is an identifier or a quoted string. Each clause may occur once,
+A rule name remains a static identifier or quoted string, not a formula. Each clause may occur once,
 in any order. `when` must return a boolean; it cannot see `locals`.
-`weight` is a finite nonnegative numeric literal, defaulting to `1`.
-`specificity` is an integer literal; when omitted it counts central argument
+`weight` is a formula yielding a finite nonnegative number, defaulting to `1`.
+It is evaluated once whenever the rule's patterns and guard match, before
+specificity filtering and random selection. It sees globals, the token's
+arguments, and runtime functions, but not rule locals. A zero weight removes
+the candidate. A negative, nonnumeric, or nonfinite result is an error.
+`specificity` is an integer formula evaluated once at startup with globals;
+when omitted it counts central argument
 constraints plus one per specified context side. Only the selected rule's
 locals are evaluated, in declaration order, before its successor.
 
@@ -179,7 +197,6 @@ own escape rules. Other backslashes in symbol text remain literal, and decoded
 backslashes are not decoded again. There is no additional JSON5 escaping layer;
 JSON5 files and command-line overrides retain their existing rules.
 
-#pagebreak(weak: true)
 == Example and JSON5 correspondence
 
 ```text
@@ -593,8 +610,8 @@ intuitively more restrictive. File order does not establish a
 If the retained rules have weights $w_1, dots, w_k$ and a sum $W > 0$,
 the nominal probability of selecting rule $i$ is $w_i / W$. Weights need
 not sum to one. Weights of `3` and `1` thus represent proportions of
-three quarters and one quarter. In both formats, weights are fixed numeric literals, not
-formula strings.
+three quarters and one quarter. JSON5 weights remain fixed numeric literals;
+native weights are evaluated for each matching candidate as described above.
 
 When no rule is selected, growth preserves the token and drawing treats
 it as a terminal.
@@ -762,6 +779,7 @@ and drawing from within formulas.
 / `mark(val)`: Records the value in a list that will be available for consultation in the next iteration. Returns `null`.
 / `marked()`: Returns the list of values recorded by `mark` during the previous iteration.
 / `gen()`: Returns the model's current generation number; the axiom corresponds to generation 0.
+/ `mxgen()`: Returns the target generation after applying `-n`, or `null` for endless animation. Without an override, it uses `recommended_iterations`, defaulting to 5. The native startup dependency rules above apply when called from globals.
 / `screen()`: Returns the canvas dimensions as `[width, height]`, two integers in pixels.
 / `width()`: Returns the current stroke width as a `float`.
 / `color()`: Returns the current stroke color as an integer.
@@ -778,6 +796,9 @@ inside a context pattern: they do not retrieve its state when a neighbor
 was drawn during the previous generation. Successive tokens produced by
 the same growth rule may therefore observe different positions if drawing
 the first moves the turtle before the next is actualized.
+
+`mxgen()` returns the effective target generation, including an override,
+or `null` for endless animation. A literal recommendation (default `5`) or override is available to globals. If the recommendation is a formula, it must first be evaluated after globals: calling `mxgen()` before that resolution is an error unless an override already supplies the target. This prevents circular dependencies between globals and the computed recommendation.
 
 == Reading context in both rule families
 
