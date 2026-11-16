@@ -21,8 +21,17 @@ fn absolute_coordinates_use_the_bottom_center_origin() -> Result<(), Box<dyn std
 }
 
 fn render(model: &Path, out: &Path) -> Result<(), Box<dyn std::error::Error>> {
+    render_with_args(model, out, &[])
+}
+
+fn render_with_args(
+    model: &Path,
+    out: &Path,
+    args: &[&str],
+) -> Result<(), Box<dyn std::error::Error>> {
     let result = Command::new(env!("CARGO_BIN_EXE_lstm"))
         .arg(model)
+        .args(args)
         .args([
             "-n", "2", "--seed", "fixed", "--width", "96", "--height", "64", "-o",
         ])
@@ -33,6 +42,60 @@ fn render(model: &Path, out: &Path) -> Result<(), Box<dyn std::error::Error>> {
         "{}",
         String::from_utf8_lossy(&result.stderr)
     );
+    Ok(())
+}
+
+#[test]
+fn transparent_exports_preserve_shapes_and_clear_each_generation()
+-> Result<(), Box<dyn std::error::Error>> {
+    let dir = tempdir()?;
+    let model = dir.path().join("transparent.lstm");
+    // A red shape on a red background must survive, as must opaque black.
+    fs::write(
+        &model,
+        r#"
+        bg: #ff0000;
+        axiom: A;
+        draw: {A => P{x:gen()*12-24,y:20}L{size:5,color:#ff0000}
+                    P{x:24,y:20}L{size:5,color:#000000}};
+        "#,
+    )?;
+    for flag in ["--transparent", "-T"] {
+        let png = dir.path().join("transparent.png");
+        render_with_args(&model, &png, &[flag])?;
+        let pixels = tiny_skia::Pixmap::load_png(&png)?;
+        assert_eq!(pixels.pixel(0, 0).unwrap().alpha(), 0);
+        assert_eq!(pixels.pixel(48, 39).unwrap().demultiply().red(), 255);
+        assert_eq!(pixels.pixel(48, 39).unwrap().alpha(), 255);
+        assert_eq!(pixels.pixel(72, 39).unwrap().red(), 0);
+        assert_eq!(pixels.pixel(72, 39).unwrap().alpha(), 255);
+        assert!(pixels.pixels().iter().any(|p| p.alpha() > 0 && p.alpha() < 255));
+
+        let gif = dir.path().join("transparent.gif");
+        render_with_args(&model, &gif, &[flag])?;
+        let mut options = gif::DecodeOptions::new();
+        options.set_color_output(gif::ColorOutput::RGBA);
+        let mut reader = options.read_info(fs::File::open(gif)?)?;
+        let mut generation = 0;
+        while let Some(frame) = reader.read_next_frame()? {
+            assert_eq!((frame.width, frame.height, frame.delay), (96, 64, 50));
+            assert!(frame.transparent.is_some());
+            assert_eq!(frame.dispose, gif::DisposalMethod::Background);
+            let pixel = |x: usize, y: usize| &frame.buffer[(y * 96 + x) * 4..][..4];
+            assert_eq!(pixel(0, 0)[3], 0);
+            assert_eq!(pixel(24 + generation * 12, 39), [255, 0, 0, 255]);
+            assert_eq!(pixel(72, 39), [0, 0, 0, 255]);
+            if generation > 0 {
+                assert_eq!(pixel(24 + (generation - 1) * 12, 39)[3], 0);
+            }
+            // Partially covered red edges must not turn dark during GIF encoding.
+            for p in frame.buffer.chunks_exact(4).filter(|p| p[3] != 0) {
+                assert!(p == [255, 0, 0, 255] || p == [0, 0, 0, 255]);
+            }
+            generation += 1;
+        }
+        assert_eq!(generation, 3);
+    }
     Ok(())
 }
 #[test]

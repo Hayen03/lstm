@@ -1,0 +1,228 @@
+// Ruby Briar — a rose and blackberry hedgerow
+version: 3;
+name: "Ruby Briar";
+description: "Thorned canes arch out of a common rootstock. Their short flowering spurs carry double carmine roses and hanging, wine-black fruit.";
+width: 1180;
+height: 740;
+bg: #F7F2DF;
+seed: "mulberry ink";
+recommended_iterations: 19;
+reclim: 16;
+
+globals: {
+    // Rear, middle and front crowns interlace as they grow. Each row gives
+    // root x, starting heading, number of joints, joint length, bend, delay.
+    crowns: [
+        [-108,85,15,40,6.5,0], [99,91,15,40,-7.1,0],
+        [-115,127,10,51,2.0,0], [68,65,11,52,-1.7,1],
+        [-52, 98,12,49,0.8,0], [103,44,9,48,-2.1,1],
+        [-110,148,8,46,1.8,2], [88,83,10,50,1.2,1],
+        [-40,62,10,48,-2.9,1], [23,119,10,50,2.6,2],
+        [-83,78,9,48,-1.8,1], [40,99,10,48,1.7,2],
+        [70,40,7,49,-1.5,2], [-63,143,7,47,2.2,3],
+    ],
+    // Basal suckers occupy the lower storey under the taller, flowering canes.
+    suckers: [[-128,121,8],[-71,78,8],[94,67,7],[17,105,9],
+              [-154,152,8],[117,32,8],[-82,102,7],[53,76,8],
+              [-107,138,6],[65,48,7],[-12,116,6],[119,87,7]],
+    // Each leaflet has a shaded and a lit half, a midrib and lateral veins.
+    greens: [
+        [#314936,#55704A,#8B9C67], [#37563A,#60824E,#99AD72],
+        [#435D39,#769350,#B2B875], [#526539,#899C54,#B9C37C],
+        [#6E543C,#986D4D,#C19A67],
+    ],
+    // Petal shadows, midtones and scalloped sunlit lips.
+    inks: [
+        [#701432,#A61943,#C72A50,#E44363,#F56D7D,#FFA29B],
+        [#861737,#B91B42,#DB3052,#EF4768,#FF7481,#FFAC9A],
+        [#672040,#981D4B,#B92D5D,#D84572,#F07492,#FFA5AF],
+    ],
+    fruit_inks: [
+        [#74382E,#B75A43,#CF7454,#EB9A6B],
+        [#722540,#9E3450,#BC4B5B,#E88D93],
+        [#382234,#583047,#834059,#BC7981],
+        [#251F2B,#3D3041,#564157,#A58D9C],
+    ],
+    // Drawing templates use local coordinates [across, ahead].
+    edge: [[0,0],[0.15,0.10],[0.24,0.23],[0.21,0.22],
+           [0.31,0.39],[0.27,0.37],[0.31,0.54],[0.265,0.52],
+           [0.27,0.66],[0.22,0.64],[0.19,0.76],[0.15,0.74],[0.04,1]],
+    petal: [[0,0],[-0.30,0.12],[-0.53,0.34],[-0.66,0.60],
+            [-0.64,0.79],[-0.50,0.93],[-0.33,0.97],[-0.15,0.94],
+            [0.08,1.025],[0.30,1.01],[0.50,0.92],[0.61,0.76],
+            [0.59,0.60],[0.47,0.45],[0.24,0.30]],
+    lip: [[-0.63,0.67],[-0.60,0.80],[-0.49,0.91],[-0.32,0.95],
+          [-0.14,0.92],[0.08,1.00],[0.28,0.99],[0.49,0.90],
+          [0.56,0.80],[0.31,0.91],[0.10,0.92],[-0.14,0.86],
+          [-0.31,0.90],[-0.47,0.86]],
+    bud: [[0,0],[-0.56,0.29],[-0.71,0.82],[-0.55,1.33],[-0.20,1.69],
+          [0.12,1.96],[0.42,1.66],[0.62,1.48],[0.72,1.01],[0.58,0.50],[0.38,0.16]],
+    bud_fold: [[0,0],[-0.32,0.37],[-0.39,0.77],[-0.27,1.14],[0.08,1.50],
+               [0.39,1.65],[0.25,1.40],[0.00,1.06],[-0.11,0.70]],
+    sepal: [[0,0],[-0.46,0.14],[-0.72,0.51],[-0.76,0.96],[-0.87,1.40],
+            [-0.60,1.13],[-0.44,0.77],[-0.17,0.54],[0.16,0.19]],
+    // Generate pen-up polygon vertices in a rotated local coordinate system.
+    outline: fn pts,o,u,v,across,ahead,flat -> [
+        {"symbol":"P","args":{
+            "x":o[0] + p[0]*across*v + p[1]*ahead*u,
+            "y":o[1] + flat*(-p[0]*across*u + p[1]*ahead*v)
+        }} for p in pts
+    ],
+    drupelets: [[-0.49,-0.02,0.38],[0.27,0.11,0.40],[-0.09,0.30,0.38],
+                [0.50,-0.23,0.40],[-0.47,-0.48,0.40],[0.10,-0.98,0.33],
+                [0.32,-0.63,0.40],[-0.15,-0.62,0.40],[-0.10,-0.14,0.43]],
+};
+
+symbols: {
+    S, Q{x:0,h:90,n:7}, E{x:0,h:90,n:9,l:48,bend:0,wait:0,id:0},
+    K{j:0,n:7,h:90,hand:1}, A{j:0,n:9,h:90,l:48,bend:0,id:0}, B{n:2,h:90,l:32,side:1},
+    I{l:30,w:2,h:90,k:0}, T{s:8,side:1}, V{s:22,k:0},
+    v{s:22,k:0}, U{s:6}, N{s:20,a:0,k:0,twist:0},
+    O{s:22,k:0,twist:0}, p{s:20,h:90,k:0,i:0,flat:0.8},
+    Y{s:6,a:0,phase:0}, b{s:6,stage:3}, d{x:0,y:0,r:2,c:#362435},
+    G,
+};
+
+// Each crown waits independently. A main tip lays down one permanent
+// internode per generation. Lateral spurs race ahead, then stop at a flower or fruit.
+axiom: G
+    ${[{"symbol":"Q","args":{"x":r[0],"h":r[1],"n":r[2]}} for r in suckers]}
+    S;
+
+growth: {
+    Q => [P{x:x-22,y:44} K{h:h,n:n,hand:-1 if h>90 else 1}],
+    "Basal sucker": K when j<n
+        locals {
+            side: hand if j%2==0 else -hand,
+            size: 28+random()*11,
+            tone: int(random()*3),
+            length: 24+random()*12,
+        }
+        => I{h:h,k:7*random()-3.5,l:length,w:1.2+0.32*(n-j)}
+           [H{rot:h+side*(47+random()*14)} V{s:size,k:tone}]
+           [H{rot:h-side*(38+random()*17)} V{s:size*0.77,k:(tone+1)%3}]
+           K{j:j+1,n:n,h:h-hand*(3+random()*5),hand:hand},
+    K when j>=n => [H{rot:h} V{s:28,k:3}],
+    S => ${[{"symbol":"E","args":{"x":crowns[i][0],"h":crowns[i][1],"n":crowns[i][2],
+                 "l":crowns[i][3],"bend":crowns[i][4],"wait":crowns[i][5],"id":i}}
+            for i in range(len(crowns))]},
+    E when wait > 0 => E{x:x,h:h,n:n,l:l,bend:bend,wait:wait-1,id:id},
+    E{wait:0} => [P{x:x-22,y:44} A{h:h+random()*6-3,n:n,l:l,bend:bend,id:id}],
+
+    "Extend a cane": A when j < n
+        locals {
+            side: 1 if ((j+id)//2)%2==0 else -1,
+            flank: 1 if (j+id)%2==0 else -1,
+            reach: l*(0.84+0.27*random()),
+            kink: 18*random()-9,
+            spur: h+side*(34+22*random()),
+            leaf: 26+10*random(),
+            tone: int(random()*3),
+        }
+        => I{h:h,k:kink,l:reach,w:1.5+(n-j)*0.43}
+           [H{rot:h+flank*(42+random()*31)} V{s:leaf,k:tone}]
+           [${[{"symbol":"B","args":{"n":2+int(random()*3),"h":spur,"l":27+random()*12,"side":side}}]
+              if (j+id)%2==0 or j==n-2 else []}]
+           A{j:j+1,n:n,h:h+bend+kink*0.65+6*random()-3,l:l,bend:bend,id:id},
+
+    "Terminal rose": A when j >= n
+        => N{s:29+random()*11,k:int(random()*3),twist:random()*360},
+
+    "Extend a spur": B when n > 0
+        locals {lean:h*0.80+90*0.20+random()*20-10, flank:side if n%2==0 else -side}
+        => I{h:h,k:random()*9-4.5,l:l,w:1.1+0.38*n}
+           [H{rot:h+flank*(43+random()*30)} V{s:21+random()*11,k:int(random()*4)}]
+           B{n:n-1,h:lean,l:l*0.93,side:side},
+
+    "A flowering spur": B{n:0} weight 5
+        => N{s:20+random()*15,k:int(random()*3),twist:random()*360},
+    "A fruiting spur": B{n:0} weight 4
+        => Y{s:8+random()*2.8,phase:int(random()*3)},
+    "An unopened tip": B{n:0} weight 2 => U{s:5+random()*2},
+
+    N when a < 4 => N{s:s,a:a+1,k:k,twist:twist},
+    Y when a < 5 => Y{s:s,a:a+1,phase:phase},
+};
+
+draw: {
+    // Thin split-colour strokes and an occasional backward-facing prickle.
+    I => H{rot:h}
+         [F{length:l*0.48,width:w+0.65,color:#573B36}]
+         F{length:l*0.48,width:w*0.77,color:#897346}
+         [T{s:3+w,side:1 if k>0 else -1}]
+         R{deg:k} [F{length:l*0.52,width:w+0.60,color:#5F443C}]
+         F{length:l*0.52,width:w*0.72,color:#86744B},
+    T => [R{deg:side*75} C{color:#8B483F}
+          (M{length:s*0.55} R{deg:side*28} M{length:s*0.52}
+           R{deg:side*112} M{length:s*0.79})],
+
+    // A compound leaf with two pairs of lateral leaflets and a terminal blade.
+    V => [F{length:s*0.32,width:0.9,color:#767343}
+          [R{deg:57} v{s:s*0.74,k:k}] [R{deg:-61} v{s:s*0.64,k:k}]
+          F{length:s*0.33,width:0.85,color:#7A804B}
+          [R{deg:42} v{s:s*0.90,k:k}] [R{deg:-48} v{s:s*0.80,k:k}]
+          F{length:s*0.17,width:0.75,color:#7A804B} v{s:s*1.13,k:k}],
+    v locals {o:pos(),ang:radians(heading()),u:cos(ang),vdir:sin(ang),pal:greens[k]}
+        => [C{color:pal[0]} (${outline(edge,o,u,vdir,-s,s,1)})]
+           [C{color:pal[1]} (${outline(edge,o,u,vdir,s,s,1)})]
+           [F{length:s*0.80,width:0.66,color:pal[2]}]
+           [M{length:s*0.37} R{deg:40} F{length:s*0.24,width:0.52,color:pal[2]}]
+           [M{length:s*0.50} R{deg:-37} F{length:s*0.21,width:0.50,color:pal[2]}],
+
+    // Active tips appear as folded copper-green leaves, even in the first frames.
+    K => [H{rot:h} v{s:8,k:4}],
+    A => [H{rot:h} v{s:9,k:4}],
+    B => [H{rot:h} v{s:6,k:3}],
+    E => [P{x:x-22,y:44} H{rot:h} v{s:4,k:4}],
+    S => [P{x:-22,y:44} v{s:6,k:4}],
+
+    // Tight buds have a crimson nose protruding from two green sepals.
+    U locals {o:pos(),a:radians(heading()),u:cos(a),vdir:sin(a)}
+        => [C{color:#AA2851} (${outline(bud,o,u,vdir,s,s,1)})]
+           [C{color:#F26A7C} (${outline(bud_fold,o,u,vdir,s,s,1)})]
+           [C{color:#596D3E} (${outline(sepal,o,u,vdir,s,s,1)})]
+           [C{color:#7F8B49} (${outline(sepal,o,u,vdir,-s*0.88,s*0.78,1)})],
+    N when a < 2 => U{s:s*(0.20+0.07*a)},
+    N when a >= 2 => O{s:s*(0.55+0.15*(a-2)),k:k,twist:twist},
+
+    // Offset whorls spiral inward. The outermost petals are broad, while the
+    // central curl is almost edge-on. Flattening the projection tilts the corolla.
+    O => ${[{"symbol":"p","args":{"s":s*(1-0.044*i),"h":twist+i*137.5,
+                                   "k":k,"i":i,"flat":0.76+0.15*cos(radians(twist))}} for i in range(17)]}
+         [R{deg:twist} M{length:s*0.055} L{size:s*0.052,color:#F6A780}],
+    p locals {
+        o:pos(),ang:radians(h),u:cos(ang),vdir:sin(ang),pal:inks[k],
+        layer: (i%3) if i<6 else (1+i%3),
+        tongue: s*(0.84 if i<6 else 0.95),
+    }
+      => [C{color:pal[layer]}
+          (${outline(petal,o,u,vdir,tongue,s,flat)})]
+         [C{color:pal[layer+2]}
+          P{x:o[0]+tongue*lip[0][0]*vdir+s*lip[0][1]*u,
+            y:o[1]+flat*(-tongue*lip[0][0]*u+s*lip[0][1]*vdir)}
+          (${outline(lip,o,u,vdir,tongue,s,flat)})],
+
+    // The fruit bunch droops under its own weight. Berries in one bunch ripen
+    // at different speeds, so garnet red and blue-black can share a stem.
+    Y locals {ripe:min(3,(a+phase)//2)}
+       => [H{rot:235} F{length:s*1.6,width:1.05,color:#796447}
+           [H{rot:255} F{length:s*1.6,width:0.95,color:#716649} b{s:s,stage:ripe}]
+           H{rot:302} F{length:s*2.0,width:1.1,color:#716649}
+           [H{rot:265} F{length:s*2.4,width:1.0,color:#716649}
+            b{s:s*1.12,stage:min(3,ripe+1)}]
+           H{rot:323} F{length:s*1.75,width:0.95,color:#776649}
+           b{s:s*0.84,stage:max(0,ripe-1-phase%2)}],
+    b locals {o:pos(),pal:fruit_inks[stage]}
+       => [H{rot:90} R{deg:24} L{size:s*0.34,color:#66744B}]
+          ${[{"symbol":"d","args":{"r":drupelets[i][2]*s,"c":pal[1+i%2],
+                                "x":o[0]+s*drupelets[i][0],"y":o[1]+s*drupelets[i][1]}}
+              for i in range(len(drupelets))]}
+          [P{x:o[0]-s*0.22,y:o[1]+s*0.04} L{size:s*0.12,color:pal[3]}],
+    d => [P{x:x,y:y} H{rot:90} M{length:-r}
+            L{size:r*1.08,color:#332737} M{length:r*0.08} L{size:r*0.91,color:c}],
+
+    // Shallow ink washes beneath the common rootstock.
+    G => [P{x:-22,y:39} C{color:#DFDAC0}
+          (${[{"symbol":"P","args":{"x":-22+230*cos(j*0.19635),"y":39+9*sin(j*0.19635)}}
+               for j in range(33)]})],
+};

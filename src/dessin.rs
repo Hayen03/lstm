@@ -173,8 +173,8 @@ impl Dessin {
         }
         Ok(())
     }
-    /// Paints captured shapes in order onto an opaque background.
-    pub fn raster(&self) -> Result<Pixmap> {
+    /// Paints captured shapes in order, optionally leaving the background transparent.
+    pub fn raster(&self, transparent: bool) -> Result<Pixmap> {
         let mut canvas =
             Pixmap::new(self.width, self.height).ok_or(Error::InvalidCanvasDimensions {
                 width: self.width,
@@ -188,7 +188,9 @@ impl Dessin {
                 (self.height as f64 - y) as f32,
             )
         };
-        canvas.fill(color(self.background));
+        if !transparent {
+            canvas.fill(color(self.background));
+        }
         for shape in &self.shapes {
             let mut path = PathBuilder::new();
             let mut paint = Paint::default();

@@ -22,6 +22,7 @@ By default, the program opens a window displaying the final generation. Close th
 | `-g`, `--globals <DEFINITIONS>` | Override or add global formulas using comma-separated `name: expression` pairs, e.g. `--globals 'scale: 2, cell_size: 8'`. Optional surrounding braces are accepted. |
 | `-s`, `--seed <SEED>` | Override the model's random seed with an integer or text seed for reproducible runs. |
 | `-o`, `--output <PATH>` | Export a `.png` of the final generation or a looping `.gif` containing generations 0 through N (N + 1 frames). GIF export enables animation automatically. |
+| `-T`, `--transparent` | Export PNG or GIF with a transparent background. PNG preserves smooth alpha edges; GIF supports only fully transparent or opaque pixels. Has no effect in the live viewer. |
 | `-W`, `--width <PIXELS>` | Override canvas width (model value, or 1000 by default). |
 | `-H`, `--height <PIXELS>` | Override canvas height (model value, or 800 by default). |
 | `-h`, `--help` | Show command-line help. |
@@ -40,6 +41,9 @@ Canvas dimensions must each be between 1 and 65,535 pixels, with at most 64,000,
 
 # Export an animation, including the axiom as the first frame.
 ./target/release/lstm lstms/lindenmayer_algae.lstm -n 10 --fps 4 -o algae.gif
+
+# Export with a transparent background (also works with .gif).
+./target/release/lstm lstms/lindenmayer_algae.lstm -n 10 -T -o algae.png
 ```
 
 Optional tracing helps inspect rule evaluation:

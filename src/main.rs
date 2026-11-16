@@ -47,6 +47,9 @@ struct Cli {
     /// A PNG contains the final frame. A GIF contains generation 0 through N.
     #[arg(short, long)]
     output: Option<PathBuf>,
+    /// Use a transparent background when exporting PNG or GIF.
+    #[arg(short = 'T', long)]
+    transparent: bool,
     #[arg(short = 'W', long)]
     width: Option<u32>,
     #[arg(short = 'H', long)]
@@ -208,10 +211,25 @@ fn run(c: Cli) -> Result<()> {
             .frame(seq, generation, &mut d, &mut trace, animate, c.dreclim)
             .with_context(|| format!("Generation {generation}"))?;
         let mut _buf: Vec<u32> = if show {
-            let raster = d.raster()?;
+            let raster = d.raster(c.transparent && c.output.is_some())?;
             if let Some(enc) = &mut encoder {
                 let mut rgba = raster.data().to_vec();
+                if c.transparent {
+                    // tiny-skia stores premultiplied colors; GIF needs straight RGB
+                    // before converting nonzero alpha to fully opaque pixels.
+                    for (bytes, pixel) in rgba.chunks_exact_mut(4).zip(raster.pixels()) {
+                        let color = pixel.demultiply();
+                        bytes.copy_from_slice(&[
+                            color.red(), color.green(), color.blue(), color.alpha(),
+                        ]);
+                    }
+                }
                 let mut f = Frame::from_rgba_speed(width as u16, height as u16, &mut rgba, 10);
+                if c.transparent {
+                    // Each generation is a complete image; clear it before the
+                    // next frame so transparent areas cannot retain old shapes.
+                    f.dispose = gif::DisposalMethod::Background;
+                }
                 // Difference rounded timestamps to distribute centisecond rounding
                 // across frames instead of accumulating a fixed per-frame error.
                 let tick = |i: i64| (i as f64 * 100. / c.fps).round();
